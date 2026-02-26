@@ -6,12 +6,12 @@ import { BillData } from '@/types'
 import { useState } from 'react'
 
 
-const emptyCustomer = {
-  name: "",
-  mail: "",
-  phone: "",
-  ref: ""
-};
+// const emptyCustomer = {
+//   name: "",
+//   mail: "",
+//   phone: "",
+//   ref: ""
+// };
 
 const NewBill = () => {
   const [customerData,setCustomerData]=useState({
@@ -23,7 +23,7 @@ const NewBill = () => {
 
   const [billData, setBillData] = useState<BillData[]>([]);
   const resetForm = () => {
-    setCustomerData(emptyCustomer);
+    setCustomerData({ name: "", mail: "", phone: "", ref: "" });
     setBillData([]);
   };
   return (

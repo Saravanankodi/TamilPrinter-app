@@ -12,7 +12,7 @@ import { Print } from '@/assets/icons';
 
 const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved}) => {
         const [value,setValue] = useState("");
-        const [currentTime, setCurrentTime] = useState(new Date());
+        const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
         useEffect(() => {
           const timer = setInterval(() => {
@@ -21,6 +21,12 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved}) => {
       
           return () => clearInterval(timer); // cleanup on unmount
         }, []);
+
+  useEffect(() => {
+        // generate new invoice number whenever customerData resets
+       
+        setValue("");
+    }, [customerData]);
 
         const saveBill = async () => {
             if (!billData || billData.length === 0) {
@@ -70,10 +76,10 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved}) => {
                 </p>
                 <div className="w-auto">
                     <p className="text-sm">
-                        {new Date().toLocaleDateString("en-IN")}
+                        {currentTime?.toLocaleDateString("en-IN")}
                     </p>
                     <p className="text-sm">
-                        {currentTime.toLocaleTimeString()}
+                        {currentTime?.toLocaleTimeString()}
                     </p>
                 </div>
             </aside>

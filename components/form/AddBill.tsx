@@ -12,7 +12,7 @@ import { BillData, billData } from '@/types';
 const AddBill = ({data,setData}:billData) => {
     const [formData, setFormData] = useState<Omit<BillData, "id">>({
         service: "",
-        quantity: 0,
+        quantity: 1,
         paper: 0,
         page: 0,
         rate: 0,

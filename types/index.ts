@@ -105,3 +105,10 @@ export type Bill = {
     name: string;
     phone: string;
   };
+  export type Customer = {
+  id: number;
+  name: string;
+  phone: string;
+  mail: string;
+  created_at?: string;
+};

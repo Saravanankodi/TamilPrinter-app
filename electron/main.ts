@@ -56,8 +56,19 @@ ipcMain.handle("save-bill", (_, payload) => {
     }, 0);
 
     // 3️⃣ Insert bill
-    const billNumber = "INV-" + Date.now();
+    const lastBill = db
+        .prepare(`SELECT bill_number FROM bills ORDER BY id DESC LIMIT 1`)
+        .get() as { bill_number: string } | undefined;
 
+      let nextNumber = 1;
+
+      if (lastBill) {
+        const lastNum = Number(lastBill.bill_number.replace("INV-", ""));
+        nextNumber = lastNum + 1;
+      }
+
+      const billNumber = `INV-${String(nextNumber).padStart(5, "0")}`;
+      
     const billResult = db.prepare(`
       INSERT INTO bills (customer_id, bill_number, total, created_at)
       VALUES (?, ?, ?, ?)
@@ -165,7 +176,7 @@ ipcMain.handle("get-bills", () => {
 
 ipcMain.handle("get-customers", () => {
   return db
-    .prepare("SELECT * FROM customers ORDER BY created_at DESC")
+    .prepare("SELECT * FROM customers ORDER BY id DESC")
     .all();
 });
 

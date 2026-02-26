@@ -16,27 +16,27 @@ const CustomerDetails = ({data,setData}:customerData) => {
               label="Customer Name" 
               type='text' 
               placeholder='Walk-in customer' 
-              value={data.name} 
+              value={data.name  || ""} 
               onChange={(e)=>{setData((prev)=>({...prev,name:e.target.value}))}} />
 
             <Input 
               label="Phone Number" 
               type='number' 
               placeholder='Enter mobile number'
-              value={data.phone} 
+              value={data.phone  || ""} 
               onChange={(e)=>{setData((prev)=>({...prev,phone:e.target.value}))}} />
 
             <Input 
               label="Email ID" 
               type='email' 
               placeholder='Optional for invoice copy'
-              value={data.mail}
+              value={data.mail  || ""}
               onChange={(e)=>{setData((prev)=>({...prev,mail:e.target.value}))}} />
             <Input 
               label="Reference / Note" 
               type='text' 
               placeholder='E.g. College project, ID card xerox' 
-              value={data.ref}
+              value={data.ref  || ""}
               onChange={(e)=>{setData((prev)=>({...prev,ref:e.target.value}))}}/>
         </form>
     </section>

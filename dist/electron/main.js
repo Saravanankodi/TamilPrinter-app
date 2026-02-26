@@ -70,7 +70,15 @@ electron_2.ipcMain.handle("save-bill", (_, payload) => {
             return sum + quantity * paper * rate;
         }, 0);
         // 3️⃣ Insert bill
-        const billNumber = "INV-" + Date.now();
+        const lastBill = database_1.db
+            .prepare(`SELECT bill_number FROM bills ORDER BY id DESC LIMIT 1`)
+            .get();
+        let nextNumber = 1;
+        if (lastBill) {
+            const lastNum = Number(lastBill.bill_number.replace("INV-", ""));
+            nextNumber = lastNum + 1;
+        }
+        const billNumber = `INV-${String(nextNumber).padStart(5, "0")}`;
         const billResult = database_1.db.prepare(`
       INSERT INTO bills (customer_id, bill_number, total, created_at)
       VALUES (?, ?, ?, ?)
@@ -140,6 +148,25 @@ electron_2.ipcMain.handle("get-bills", () => {
         };
     });
     return billsWithStatus;
+});
+electron_2.ipcMain.handle("get-customers", () => {
+    return database_1.db
+        .prepare("SELECT * FROM customers ORDER BY id DESC")
+        .all();
+});
+electron_2.ipcMain.handle("add-customer", (_, customer) => {
+    const existing = database_1.db
+        .prepare("SELECT id FROM customers WHERE phone = ?")
+        .get(customer.phone);
+    if (existing) {
+        throw new Error("Customer already exists with this phone");
+    }
+    const stmt = database_1.db.prepare(`
+    INSERT INTO customers (name, mail, phone, ref)
+    VALUES (?, ?, ?, ?)
+  `);
+    const result = stmt.run(customer.name, customer.mail, customer.phone, customer.ref);
+    return { id: result.lastInsertRowid };
 });
 function createWindow() {
     const mainWindow = new electron_1.BrowserWindow({

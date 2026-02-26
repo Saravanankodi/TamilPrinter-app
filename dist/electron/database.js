@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS customers (
   name TEXT,
   mail TEXT,
   phone TEXT,
-  ref TEXT
+  ref TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS bills (

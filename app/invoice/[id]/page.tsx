@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Invoice from "@/components/layout/Invoice";
 
 export default function InvoicePage() {
   const params = useParams();
@@ -20,34 +21,10 @@ export default function InvoicePage() {
   const { bill, customer, items } = data;
 
   return (
-    <div className="p-6">
-      <h1>Invoice {bill.bill_number}</h1>
-
-      <h2>Customer</h2>
-      <p>{customer.name}</p>
-      <p>{customer.phone}</p>
-
-      <h2>Items</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Service</th>
-            <th>Qty</th>
-            <th>Rate</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((it: any) => (
-            <tr key={it.id}>
-              <td>{it.service}</td>
-              <td>{it.quantity}</td>
-              <td>{it.rate}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <h3>Total: {bill.total}</h3>
-    </div>
+    <>
+    <section className="w-1/2 h-full">
+      <Invoice billData={items} customerData={customer} onSaved={()=>{}} />
+    </section>
+    </>
   );
 }

@@ -76,10 +76,15 @@ const Customers = () => {
               <Table.Row key={customer.id}>
                 <Table.Cell>{customer.name}</Table.Cell>
                 <Table.Cell>{customer.phone}</Table.Cell>
-                {/* <Table.Cell>
-                  {new Date(customer.created_at).toLocaleDateString()}
-                </Table.Cell> */}
-                <Table.Cell>--</Table.Cell>
+                <Table.Cell>
+                  {customer.lastVisit
+                    ? new Date(customer.lastVisit).toLocaleDateString()
+                    : "--"}
+                </Table.Cell>
+
+                <Table.Cell>
+                  ₹{(customer.totalSpent ?? 0).toLocaleString()}
+                </Table.Cell>
               </Table.Row>
             ))
           )}

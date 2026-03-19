@@ -1,9 +1,44 @@
+"use client"
+import { useEffect, useState } from 'react';
 import { Add, Customers, Notification } from "@/assets/icons";
 import Card from "@/components/layout/Card";
 import Header from "@/components/layout/Header";
 import RecentInvoice from "@/components/ui/tables/RecentInvoice";
+import { calculateDashboardStats } from '@/utils/dashboard';
 
 export default function Home() {
+const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(new Date());
+    }, 60000); // update every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const date = new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  }).format(now);
+
+  const time = new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(now);
+  const [invoices, setInvoices] = useState<any[]>([]);
+
+useEffect(() => {
+  async function loadInvoices() {
+    const data = await window.api.getBills();
+    setInvoices(data);
+  }
+
+  loadInvoices();
+}, []);
+const stats = calculateDashboardStats(invoices);
   return (
     <>
     <section className="w-full h-full max-h-svh  flex flex-col gap-1 text-black">
@@ -19,11 +54,11 @@ export default function Home() {
         <div className="w-fit flex items-center gap-2">
           {/* Date and Time */}
           <div className="w-fit text-right  border-r pr-6 border-[#00000014]">
-            <p className="text-sm font-semibold text-black">
-              Thursday, October 24
-            </p>
+            <h4 className="text-sm font-semibold text-black">
+              {date}
+            </h4>
             <p className="text-sm">
-              10:45 AM
+              {time}
             </p>
           </div>
           <div className="w-fit h-fit rounded-full bg-[#F1F5F9] p-2 ">
@@ -33,21 +68,28 @@ export default function Home() {
       </header>
       <div className="w-full h-40 flex items-center justify-center gap-6">
           <Card 
-          label="Today's Revenue"
-          value={"$142.50"}
-          disc="+12% from yesterday"/>
+            label="Today's Revenue"
+            value={`₹${stats.todaysRevenue.toFixed(2)}`}
+            disc={`${stats.percentChange.toFixed(1)}% from yesterday`}
+          />
+
           <Card 
-          label="Today's Revenue"
-          value={"$142.50"}
-          disc="+12% from yesterday"/>
+            label="Invoices Generated"
+            value={stats.invoicesGenerated.toString()}
+            disc="Today"
+          />
+
           <Card 
-          label="Today's Revenue"
-          value={"$142.50"}
-          disc="+12% from yesterday"/>
+            label="Monthly Sales"
+            value={`₹${stats.monthlySales.toFixed(2)}`}
+            disc="This month"
+          />
+
           <Card 
-          label="Today's Revenue"
-          value={"$142.50"}
-          disc="+12% from yesterday"/>
+            label="Payment Pending"
+            value={`₹${stats.pendingPayments.toFixed(2)}`}
+            disc="Unpaid invoices"
+          />
       </div>
       <main className="w-full flex-1 grid grid-cols-8 grid-rows-4 gap-4 overflow-hidden pb-4">
           <RecentInvoice/>

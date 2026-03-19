@@ -150,9 +150,23 @@ electron_2.ipcMain.handle("get-bills", () => {
     return billsWithStatus;
 });
 electron_2.ipcMain.handle("get-customers", () => {
-    return database_1.db
-        .prepare("SELECT * FROM customers ORDER BY id DESC")
-        .all();
+    const stmt = database_1.db.prepare(`
+    SELECT
+      c.id,
+      c.name,
+      c.phone,
+      c.mail,
+      c.ref,
+
+      COALESCE(SUM(b.total), 0) AS totalSpent,
+      MAX(b.created_at) AS lastVisit
+
+    FROM customers c
+    LEFT JOIN bills b ON b.customer_id = c.id
+    GROUP BY c.id
+    ORDER BY c.id DESC
+  `);
+    return stmt.all();
 });
 electron_2.ipcMain.handle("add-customer", (_, customer) => {
     const existing = database_1.db
@@ -168,6 +182,8 @@ electron_2.ipcMain.handle("add-customer", (_, customer) => {
     const result = stmt.run(customer.name, customer.mail, customer.phone, customer.ref);
     return { id: result.lastInsertRowid };
 });
+const child_process_1 = require("child_process");
+let server;
 function createWindow() {
     const mainWindow = new electron_1.BrowserWindow({
         width: 1200,
@@ -178,10 +194,35 @@ function createWindow() {
             nodeIntegration: false,
         },
     });
-    mainWindow.loadURL("http://localhost:3000");
+    const isDev = !electron_1.app.isPackaged;
+    if (isDev) {
+        mainWindow.loadURL("http://localhost:3000");
+        mainWindow.webContents.openDevTools();
+    }
+    else {
+        const appPath = path_1.default.join(process.resourcesPath, "app");
+        // 🚀 Start Next.js server
+        server = (0, child_process_1.spawn)(process.execPath, [
+            path_1.default.join(appPath, "node_modules/next/dist/bin/next"),
+            "start",
+            "-p",
+            "3000"
+        ], {
+            cwd: appPath,
+            stdio: "inherit",
+        });
+        // ⏳ Wait a bit before loading
+        setTimeout(() => {
+            mainWindow.loadURL("http://localhost:3000");
+        }, 2000);
+    }
 }
 electron_1.app.whenReady().then(async () => {
     // Load DB AFTER app ready
     await Promise.resolve().then(() => __importStar(require("./database")));
     createWindow();
+});
+electron_1.app.on("will-quit", () => {
+    if (server)
+        server.kill();
 });

@@ -175,9 +175,24 @@ ipcMain.handle("get-bills", () => {
 });
 
 ipcMain.handle("get-customers", () => {
-  return db
-    .prepare("SELECT * FROM customers ORDER BY id DESC")
-    .all();
+  const stmt = db.prepare(`
+    SELECT
+      c.id,
+      c.name,
+      c.phone,
+      c.mail,
+      c.ref,
+
+      COALESCE(SUM(b.total), 0) AS totalSpent,
+      MAX(b.created_at) AS lastVisit
+
+    FROM customers c
+    LEFT JOIN bills b ON b.customer_id = c.id
+    GROUP BY c.id
+    ORDER BY c.id DESC
+  `);
+
+  return stmt.all();
 });
 
 ipcMain.handle("add-customer", (_, customer) => {
@@ -204,19 +219,49 @@ ipcMain.handle("add-customer", (_, customer) => {
   return { id: result.lastInsertRowid };
 });
 
-function createWindow() {
-    const mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
-        webPreferences: {
-          preload: path.join(__dirname, "preload.js"),
-          contextIsolation: true,
-          nodeIntegration: false,
-        },
-      });
-      
+import { spawn } from "child_process";
 
-  mainWindow.loadURL("http://localhost:3000");
+let server: any;
+
+function createWindow() {
+  const mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  const isDev = !app.isPackaged;
+
+  if (isDev) {
+    mainWindow.loadURL("http://localhost:3000");
+    mainWindow.webContents.openDevTools();
+  } else {
+    const appPath = path.join(process.resourcesPath, "app");
+
+    // 🚀 Start Next.js server
+    server = spawn(
+      process.execPath,
+      [
+        path.join(appPath, "node_modules/next/dist/bin/next"),
+        "start",
+        "-p",
+        "3000"
+      ],
+      {
+        cwd: appPath,
+        stdio: "inherit",
+      }
+    );
+
+    // ⏳ Wait a bit before loading
+    setTimeout(() => {
+      mainWindow.loadURL("http://localhost:3000");
+    }, 2000);
+  }
 }
 app.whenReady().then(async () => {
     // Load DB AFTER app ready
@@ -224,4 +269,6 @@ app.whenReady().then(async () => {
   
     createWindow();
   });
- 
+app.on("will-quit", () => {
+  if (server) server.kill();
+});

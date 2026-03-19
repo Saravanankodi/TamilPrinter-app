@@ -61,7 +61,11 @@ const RecentInvoice = () => {
                     </Table.Cell>
                     <Table.Cell>₹ {bill.total}</Table.Cell>
                     <Table.Cell>{bill.payment_method}</Table.Cell>
-                    <Table.Cell>{bill.status}</Table.Cell>
+                    <Table.Cell>
+                        <span className={`w-fit h-auto px-2 py-1 rounded-full text-center ${bill.status === "Paid" ? "bg-[#DCFCE7] text-[#166534]":"bg-[#FEF9C3] text-[#854D0E] "}`}>
+                            {bill.status}
+                        </span>
+                    </Table.Cell>
                 </Table.Row>
                 ))}
                 </tbody>

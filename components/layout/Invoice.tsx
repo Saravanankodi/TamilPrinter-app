@@ -9,10 +9,14 @@ import Card from '@/assets/icons/Card';
 import { InvoiceProps } from '@/types';
 import Button from '../base/Button';
 import { Print } from '@/assets/icons';
+import Swal from 'sweetalert2';
+import { showAlert } from '@/utils/Alert';
+import { calculateInvoice } from '@/utils/invoiceCalculator';
 
 const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved}) => {
         const [value,setValue] = useState("");
         const [currentTime, setCurrentTime] = useState<Date | null>(null);
+        const [billNumber, setBillNumber] = useState<string | null>(null);
 
         useEffect(() => {
           const timer = setInterval(() => {
@@ -30,31 +34,56 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved}) => {
 
         const saveBill = async () => {
             if (!billData || billData.length === 0) {
-              alert("No items in bill");
-              return;
+                await showAlert({
+                    icon: 'info',
+                    title: 'Alert!',
+                    text: 'You cannot enter details temporarily.',
+                    confirmText: 'OK',
+                    });
+                return;
             }
-          
+
             if (!value) {
-              alert("Select payment method");
-              return;
+                await showAlert({
+                    icon: 'warning',
+                    title: 'Select Payment',
+                    text: 'Please select a payment method before saving.',
+                    confirmText: 'OK',
+                    });
+                return;
             }
-          
+
             try {
-              const result = await window.api.saveBill({
+                const result = await window.api.saveBill({
                 customer: customerData,
                 items: billData,
                 paymentMethod: value,
-              });
-          
-              alert("Bill saved: " + result.billNumber);
-              if (result?.success) {
-                onSaved(); // reset form
+                });
+
+                setBillNumber(result.billNumber); // ✅ store bill number
+
+                await showAlert({
+                    icon: 'success',
+                    title: 'Bill Saved',
+                    text: `Bill number: ${result.billNumber}`,
+                    confirmText: 'OK',
+                    });
+
+                if (result?.success) {
+                onSaved();
                 }
             } catch (err) {
-              console.error(err);
-              alert("Failed to save bill");
+                console.error(err);
+                await showAlert({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to save bill. Please try again.',
+                    confirmText: 'OK',
+                    });
             }
-          };
+        };
+
+        const BillTotal = calculateInvoice(billData)
             
   return (
     <>
@@ -65,7 +94,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved}) => {
                     Current Bill
                 </h1>
                 <p className="text-sm bg-[#E9F5FF] px-2 rounded-full ">
-                    #INV-2023-8492
+                    #{billNumber || "Generating..."}
                 </p>
             </aside>
         </header>
@@ -124,6 +153,33 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved}) => {
                 </main>
 
                 <aside className=" absolute bottom-0 flex flex-col gap-3 justify-center items-center">
+                    <div className="w-full h-auto space-y-2">
+                        
+                        <div className="w-full h-min flex items-center justify-between">
+                            <p className="text-xs">
+                                Subtotal
+                            </p>
+                            <h4 className="text-xs">
+                                ₹{BillTotal.subtotal}
+                            </h4>
+                        </div>
+                        <div className="w-full h-min flex items-center justify-between">
+                            <p className="text-xs">
+                                Tax (GST 18%)
+                            </p>
+                            <h4 className="text-xs">
+                                ₹{BillTotal.tax}
+                            </h4>
+                        </div>
+                        <div className="w-full h-min flex items-center justify-between">
+                            <h4 className="text-sm">
+                                Grand Total
+                            </h4>
+                            <h4 className="text-sm">
+                                ₹{BillTotal.grandTotal}
+                            </h4>
+                        </div>
+                    </div>
                     <RadioGroup value={value} onValueChange={setValue} name='serviceType' className='w-full h-auto flex items-center justify-center gap-2 text-sm' >
                         <RadioGroup.Item value='Cash' label='Cash' icon={<Cash/>} />
                         <RadioGroup.Item value='UPI' label='UPI / QR' icon={<Upi/>} />

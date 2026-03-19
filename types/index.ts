@@ -1,4 +1,5 @@
 import React, { ReactNode } from "react";
+import { SweetAlertIcon } from "sweetalert2";
 
 export type NavLinkProps ={
     href:string;
@@ -110,5 +111,28 @@ export type Bill = {
   name: string;
   phone: string;
   mail: string;
+  totalSpent: number;
+  lastVisit: string | null;
   created_at?: string;
+};
+export type Invoice = {
+  id: string;
+  total: number;
+  status: 'Paid' | 'Pending';
+  created_at: string;
+};
+export interface AlertModalProps {
+  title: string;
+  text: string;
+  type?: SweetAlertIcon;       // success | error | warning | info | question
+  confirmText?: string;
+  cancelText?: string;
+  showCancelButton?: boolean;
+  onConfirm?: () => void;      // callback when confirmed
+  onCancel?: () => void;       // callback when cancelled
+}
+export type CalculationResult = {
+  subtotal: number;
+  tax: number;
+  grandTotal: number;
 };

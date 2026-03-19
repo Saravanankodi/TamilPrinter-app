@@ -12,9 +12,9 @@ const Card = ({label,icon,disc,value}:CardProps) => {
                 {icon}
             </div>
         </aside>
-        <p className="text-2xl">
+        <h4 className="text-[28px] text-[#0F172A] font-bold  ">
             {value}
-        </p>
+        </h4>
         <p className="text-base">
             {disc}
         </p>

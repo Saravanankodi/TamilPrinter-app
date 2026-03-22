@@ -5,14 +5,6 @@ import Invoice from '@/components/layout/Invoice'
 import { BillData } from '@/types'
 import { useState } from 'react'
 
-
-// const emptyCustomer = {
-//   name: "",
-//   mail: "",
-//   phone: "",
-//   ref: ""
-// };
-
 const NewBill = () => {
   const [customerData,setCustomerData]=useState({
     name:"",

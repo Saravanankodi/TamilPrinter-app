@@ -3,6 +3,13 @@ import path from "path";
 import { ipcMain } from "electron";
 import { db } from "./database";
 
+// 🔒 Prevent multiple instances of the app
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+  process.exit(0);
+}
+
 type BillRow = {
   id: number;
   customer_id: number;
@@ -220,8 +227,51 @@ ipcMain.handle("add-customer", (_, customer) => {
 });
 
 import { spawn } from "child_process";
+import net from "net";
+import fs from "fs";
+import os from "os";
 
 let server: any;
+
+// ⏳ Poll TCP until the server is actually listening, then run callback
+function waitForPort(
+  port: number,
+  host: string,
+  onReady: () => void,
+  onFail: () => void,
+  maxAttempts = 40,
+  intervalMs = 500
+): void {
+  let attempts = 0;
+  const tryConnect = () => {
+    const client = new net.Socket();
+    client.setTimeout(300);
+    client
+      .connect(port, host, () => {
+        client.destroy();
+        onReady();
+      })
+      .on("error", () => {
+        client.destroy();
+        attempts++;
+        if (attempts >= maxAttempts) {
+          onFail();
+        } else {
+          setTimeout(tryConnect, intervalMs);
+        }
+      })
+      .on("timeout", () => {
+        client.destroy();
+        attempts++;
+        if (attempts >= maxAttempts) {
+          onFail();
+        } else {
+          setTimeout(tryConnect, intervalMs);
+        }
+      });
+  };
+  tryConnect();
+}
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -240,27 +290,70 @@ function createWindow() {
     mainWindow.loadURL("http://localhost:3000");
     mainWindow.webContents.openDevTools();
   } else {
-    const appPath = path.join(process.resourcesPath, "app");
-
-    // 🚀 Start Next.js server
-    server = spawn(
-      process.execPath,
-      [
-        path.join(appPath, "node_modules/next/dist/bin/next"),
-        "start",
-        "-p",
-        "3000"
-      ],
-      {
-        cwd: appPath,
-        stdio: "inherit",
-      }
+    // Show a simple loading page while the server starts
+    mainWindow.loadURL(
+      "data:text/html,<html><body style='background:#0f172a;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:#94a3b8;font-size:18px;'>Starting TamilPrinter...</body></html>"
     );
 
-    // ⏳ Wait a bit before loading
-    setTimeout(() => {
-      mainWindow.loadURL("http://localhost:3000");
-    }, 2000);
+    // 🚀 Start Next.js standalone server
+    // With asar:false, all app files live at resources/app/
+    const standaloneServer = path.join(
+      process.resourcesPath,
+      "app",
+      ".next",
+      "standalone",
+      "server.js"
+    );
+
+    const logFile = path.join(os.tmpdir(), "tamilprinter-server.log");
+    const logStream = fs.createWriteStream(logFile, { flags: "a" });
+    logStream.write(`\n--- App started at ${new Date().toISOString()} ---\n`);
+    logStream.write(`Server path: ${standaloneServer}\n`);
+    logStream.write(`Server exists: ${fs.existsSync(standaloneServer)}\n`);
+
+    server = spawn(process.execPath, [standaloneServer], {
+      env: {
+        ...process.env,
+        PORT: "3000",
+        HOSTNAME: "127.0.0.1",
+        NODE_ENV: "production",
+        // 🔑 CRITICAL: tells Electron binary to run as plain Node.js
+        ELECTRON_RUN_AS_NODE: "1",
+      },
+      stdio: "pipe",
+    });
+
+    server.stdout?.on("data", (data: Buffer) => {
+      logStream.write("[stdout] " + data.toString());
+    });
+    server.stderr?.on("data", (data: Buffer) => {
+      logStream.write("[stderr] " + data.toString());
+    });
+    server.on("close", (code: number) => {
+      logStream.write(`[server exited] code=${code}\n`);
+    });
+    server.on("error", (err: Error) => {
+      logStream.write(`[spawn error] ${err.message}\n`);
+    });
+
+    // ⏳ Poll until port 3000 is listening, then load the app
+    waitForPort(
+      3000,
+      "127.0.0.1",
+      () => {
+        logStream.write("Server is ready — loading URL\n");
+        mainWindow.loadURL("http://127.0.0.1:3000");
+      },
+      () => {
+        logStream.write("Server failed to start after max retries\n");
+        mainWindow.loadURL(
+          `data:text/html,<html><body style='background:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:#f87171;font-size:16px;gap:12px;'>
+            <div style='font-size:24px'>⚠️ Server failed to start</div>
+            <div style='color:#94a3b8'>Check log: ${logFile.replace(/\\/g, "\\\\")}</div>
+          </body></html>`
+        );
+      }
+    );
   }
 }
 app.whenReady().then(async () => {

@@ -8,7 +8,7 @@
     "electron": "wait-on http://localhost:3000 && electron .",
     "build:electron": "tsc -p tsconfig.electron.json",
     "build:next": "next build",
-    "build": "npm run build:next && npm run build:electron",
+    "build": "npm run build:next && node scripts/copy-static.js && npm run build:electron",
     "dist": "npm run build && electron-builder",
     "start": "next start",
     "lint": "eslint"
@@ -16,13 +16,13 @@
   "build": {
     "appId": "com.printout.app",
     "productName": "TamilPrinter",
+    "asar": false,
     "directories": {
-      "output": "dist"
+      "output": "release"
     },
     "files": [
       "dist/**/*",
-      ".next/**/*",
-      "node_modules/**/*",
+      ".next/standalone/**/*",
       "package.json"
     ],
     "win": {
@@ -32,6 +32,8 @@
   "dependencies": {
     "better-sqlite3": "^12.6.2",
     "clsx": "^2.1.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",

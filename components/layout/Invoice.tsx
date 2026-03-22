@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import Lable from '../ui/Lable'
 import Table from './Table'
 import { RadioGroup } from '../base/RadioGroups'
@@ -12,19 +12,26 @@ import { Print } from '@/assets/icons';
 import Swal from 'sweetalert2';
 import { showAlert } from '@/utils/Alert';
 import { calculateInvoice } from '@/utils/invoiceCalculator';
+import { generatePDF } from '@/utils/pdfGenerator';
 
 const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved}) => {
+
+        const invoiceRef = useRef<HTMLDivElement>(null);
         const [value,setValue] = useState("");
         const [currentTime, setCurrentTime] = useState<Date | null>(null);
         const [billNumber, setBillNumber] = useState<string | null>(null);
+        const [shouldDownload, setShouldDownload] = useState(false);
 
         useEffect(() => {
-          const timer = setInterval(() => {
-            setCurrentTime(new Date()); // update every second
-          }, 1000);
-      
-          return () => clearInterval(timer); // cleanup on unmount
-        }, []);
+            if (shouldDownload && invoiceRef.current) {
+                generatePDF(
+                invoiceRef.current,
+                `${customerData.name || "invoice"}.pdf`
+                );
+
+                setShouldDownload(false); // reset
+            }
+        }, [shouldDownload]);
 
   useEffect(() => {
         // generate new invoice number whenever customerData resets
@@ -35,21 +42,21 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved}) => {
         const saveBill = async () => {
             if (!billData || billData.length === 0) {
                 await showAlert({
-                    icon: 'info',
-                    title: 'Alert!',
-                    text: 'You cannot enter details temporarily.',
-                    confirmText: 'OK',
-                    });
+                icon: 'info',
+                title: 'Alert!',
+                text: 'You cannot enter details temporarily.',
+                confirmText: 'OK',
+                });
                 return;
             }
 
             if (!value) {
                 await showAlert({
-                    icon: 'warning',
-                    title: 'Select Payment',
-                    text: 'Please select a payment method before saving.',
-                    confirmText: 'OK',
-                    });
+                icon: 'warning',
+                title: 'Select Payment',
+                text: 'Please select a payment method before saving.',
+                confirmText: 'OK',
+                });
                 return;
             }
 
@@ -60,26 +67,30 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved}) => {
                 paymentMethod: value,
                 });
 
-                setBillNumber(result.billNumber); // ✅ store bill number
+                setBillNumber(result.billNumber);
 
                 await showAlert({
-                    icon: 'success',
-                    title: 'Bill Saved',
-                    text: `Bill number: ${result.billNumber}`,
-                    confirmText: 'OK',
-                    });
+                icon: 'success',
+                title: 'Bill Saved',
+                text: `Bill number: ${result.billNumber}`,
+                confirmText: 'OK',
+                });
+
+                // ✅ trigger AFTER state update
+                setShouldDownload(true);
 
                 if (result?.success) {
                 onSaved();
                 }
+
             } catch (err) {
                 console.error(err);
                 await showAlert({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Failed to save bill. Please try again.',
-                    confirmText: 'OK',
-                    });
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to save bill. Please try again.',
+                confirmText: 'OK',
+                });
             }
         };
 
@@ -87,21 +98,18 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved}) => {
             
   return (
     <>
-    <section className="w-full h-full relative rounded-lg bg-white p-1 ">
+    <section ref={invoiceRef} className="w-full h-full relative rounded-lg bg-white p-2 ">
         <header className="w-full h-auto border-b border-b-[#00000014] p-4">
             <aside className="flex gap-4">
                 <h1 className="text-sm">
                     Current Bill
                 </h1>
-                <p className="text-sm bg-[#E9F5FF] px-2 rounded-full ">
-                    #{billNumber || "Generating..."}
-                </p>
             </aside>
         </header>
         <main className="w-auto space-y-2">
             <aside className="w-full flex justify-between items-center p-2">
                 <p className="text-sm h-fit  bg-[#E9F5FF] px-2 rounded-full ">
-                    #INV-2023-8492
+                    #{billNumber || "Generating..."}
                 </p>
                 <div className="w-auto">
                     <p className="text-sm">
@@ -112,7 +120,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved}) => {
                     </p>
                 </div>
             </aside>
-            <div className="grid grid-cols-2 grid-rows-2 gap-4 p-2">
+            <div className="w-full grid grid-cols-2 grid-rows-2 gap-4 p-2">
                 <Lable Name='Customer Name' value={customerData.name}/>
                 <Lable Name='Phone' value={customerData.phone}/>
                 <Lable Name='Email' value={customerData.mail}/>
@@ -152,7 +160,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved}) => {
                     </Table>
                 </main>
 
-                <aside className=" absolute bottom-0 flex flex-col gap-3 justify-center items-center">
+                <aside className=" absolute bottom-0 flex flex-col gap-5 justify-center items-center mx-auto ">
                     <div className="w-full h-auto space-y-2">
                         
                         <div className="w-full h-min flex items-center justify-between">
@@ -180,7 +188,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved}) => {
                             </h4>
                         </div>
                     </div>
-                    <RadioGroup value={value} onValueChange={setValue} name='serviceType' className='w-full h-auto flex items-center justify-center gap-2 text-sm' >
+                    <RadioGroup value={value} onValueChange={setValue} name='serviceType' className='w-full h-auto flex items-center justify-center gap-2 text-sm mx-auto' >
                         <RadioGroup.Item value='Cash' label='Cash' icon={<Cash/>} />
                         <RadioGroup.Item value='UPI' label='UPI / QR' icon={<Upi/>} />
                         <RadioGroup.Item value='Card' label='Card' icon={<Card/>}/>

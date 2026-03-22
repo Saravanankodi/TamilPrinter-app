@@ -40,6 +40,12 @@ const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
 const electron_2 = require("electron");
 const database_1 = require("./database");
+// 🔒 Prevent multiple instances of the app
+const gotLock = electron_1.app.requestSingleInstanceLock();
+if (!gotLock) {
+    electron_1.app.quit();
+    process.exit(0);
+}
 electron_2.ipcMain.handle("save-bill", (_, payload) => {
     const { customer, items, paymentMethod } = payload;
     if (!customer?.phone || !items?.length) {
@@ -183,7 +189,44 @@ electron_2.ipcMain.handle("add-customer", (_, customer) => {
     return { id: result.lastInsertRowid };
 });
 const child_process_1 = require("child_process");
+const net_1 = __importDefault(require("net"));
+const fs_1 = __importDefault(require("fs"));
+const os_1 = __importDefault(require("os"));
 let server;
+// ⏳ Poll TCP until the server is actually listening, then run callback
+function waitForPort(port, host, onReady, onFail, maxAttempts = 40, intervalMs = 500) {
+    let attempts = 0;
+    const tryConnect = () => {
+        const client = new net_1.default.Socket();
+        client.setTimeout(300);
+        client
+            .connect(port, host, () => {
+            client.destroy();
+            onReady();
+        })
+            .on("error", () => {
+            client.destroy();
+            attempts++;
+            if (attempts >= maxAttempts) {
+                onFail();
+            }
+            else {
+                setTimeout(tryConnect, intervalMs);
+            }
+        })
+            .on("timeout", () => {
+            client.destroy();
+            attempts++;
+            if (attempts >= maxAttempts) {
+                onFail();
+            }
+            else {
+                setTimeout(tryConnect, intervalMs);
+            }
+        });
+    };
+    tryConnect();
+}
 function createWindow() {
     const mainWindow = new electron_1.BrowserWindow({
         width: 1200,
@@ -200,21 +243,50 @@ function createWindow() {
         mainWindow.webContents.openDevTools();
     }
     else {
-        const appPath = path_1.default.join(process.resourcesPath, "app");
-        // 🚀 Start Next.js server
-        server = (0, child_process_1.spawn)(process.execPath, [
-            path_1.default.join(appPath, "node_modules/next/dist/bin/next"),
-            "start",
-            "-p",
-            "3000"
-        ], {
-            cwd: appPath,
-            stdio: "inherit",
+        // Show a simple loading page while the server starts
+        mainWindow.loadURL("data:text/html,<html><body style='background:#0f172a;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:#94a3b8;font-size:18px;'>Starting TamilPrinter...</body></html>");
+        // 🚀 Start Next.js standalone server
+        // With asar:false, all app files live at resources/app/
+        const standaloneServer = path_1.default.join(process.resourcesPath, "app", ".next", "standalone", "server.js");
+        const logFile = path_1.default.join(os_1.default.tmpdir(), "tamilprinter-server.log");
+        const logStream = fs_1.default.createWriteStream(logFile, { flags: "a" });
+        logStream.write(`\n--- App started at ${new Date().toISOString()} ---\n`);
+        logStream.write(`Server path: ${standaloneServer}\n`);
+        logStream.write(`Server exists: ${fs_1.default.existsSync(standaloneServer)}\n`);
+        server = (0, child_process_1.spawn)(process.execPath, [standaloneServer], {
+            env: {
+                ...process.env,
+                PORT: "3000",
+                HOSTNAME: "127.0.0.1",
+                NODE_ENV: "production",
+                // 🔑 CRITICAL: tells Electron binary to run as plain Node.js
+                ELECTRON_RUN_AS_NODE: "1",
+            },
+            stdio: "pipe",
         });
-        // ⏳ Wait a bit before loading
-        setTimeout(() => {
-            mainWindow.loadURL("http://localhost:3000");
-        }, 2000);
+        server.stdout?.on("data", (data) => {
+            logStream.write("[stdout] " + data.toString());
+        });
+        server.stderr?.on("data", (data) => {
+            logStream.write("[stderr] " + data.toString());
+        });
+        server.on("close", (code) => {
+            logStream.write(`[server exited] code=${code}\n`);
+        });
+        server.on("error", (err) => {
+            logStream.write(`[spawn error] ${err.message}\n`);
+        });
+        // ⏳ Poll until port 3000 is listening, then load the app
+        waitForPort(3000, "127.0.0.1", () => {
+            logStream.write("Server is ready — loading URL\n");
+            mainWindow.loadURL("http://127.0.0.1:3000");
+        }, () => {
+            logStream.write("Server failed to start after max retries\n");
+            mainWindow.loadURL(`data:text/html,<html><body style='background:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:#f87171;font-size:16px;gap:12px;'>
+            <div style='font-size:24px'>⚠️ Server failed to start</div>
+            <div style='color:#94a3b8'>Check log: ${logFile.replace(/\\/g, "\\\\")}</div>
+          </body></html>`);
+        });
     }
 }
 electron_1.app.whenReady().then(async () => {

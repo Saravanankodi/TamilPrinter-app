@@ -98,7 +98,6 @@ export default function Home() {
                     icon={<Info className='w-8 h-8 bg-[#FEF2F2] text-[#DC2626] rounded-md p-2 '/>}
                 />
             </div>
-
             <main className="w-full max-h-screen grid grid-cols-12 grid-rows-6 gap-4 overflow-hidden pb-4">
                 <div className="col-span-8 row-span-6 flex flex-col gap-2">
                     <RecentInvoice />

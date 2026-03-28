@@ -41,7 +41,7 @@ export default function RootLayout({
         <aside className="w-max h-screen sticky top-0 left-0">
           <Sidebar/>
         </aside>
-        <main className="w-full max-h-screen">
+        <main className="w-full max-h-screen overflow-hidden">
           {children}
         </main>
       </body>

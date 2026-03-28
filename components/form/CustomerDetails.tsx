@@ -13,6 +13,7 @@ const CustomerDetails = ({data,setData}:customerData) => {
         </aside>
         <form action="" className='w-full h-auto grid grid-cols-2 grid-rows-2 gap-2'>
             <Input 
+              className='max-w-75'
               label="Customer Name" 
               type='text' 
               placeholder='Walk-in customer' 
@@ -20,6 +21,7 @@ const CustomerDetails = ({data,setData}:customerData) => {
               onChange={(e)=>{setData((prev)=>({...prev,name:e.target.value}))}} />
 
             <Input 
+              className='max-w-75'
               label="Phone Number" 
               type='number' 
               placeholder='Enter mobile number'
@@ -27,12 +29,14 @@ const CustomerDetails = ({data,setData}:customerData) => {
               onChange={(e)=>{setData((prev)=>({...prev,phone:e.target.value}))}} />
 
             <Input 
+              className='max-w-75'
               label="Email ID" 
               type='email' 
               placeholder='Optional for invoice copy'
               value={data.mail  || ""}
               onChange={(e)=>{setData((prev)=>({...prev,mail:e.target.value}))}} />
             <Input 
+              className='max-w-75'
               label="Reference / Note" 
               type='text' 
               placeholder='E.g. College project, ID card xerox' 

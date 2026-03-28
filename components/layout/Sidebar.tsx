@@ -2,6 +2,7 @@
 
 import { Customers, DashBoard, NewFile, Print, Products, Reports } from '@/assets/icons'
 import NavLink from '../base/NavLink';
+import SvgDoc from '@/assets/icons/Doc';
 // import React, { useState } from 'react'
 
 const Sidebar = () => {
@@ -9,6 +10,7 @@ const Sidebar = () => {
   const links = [
     {href:"/",icon:<DashBoard/>,label:"Dashboard",exact:true},
     {href:"/new-bill",icon:<NewFile/>,label:"New Bill"},
+    {href:"/invoice",icon:<SvgDoc/>,label:"All Invoices"},
     {href:"/products",icon:<Products/>,label:"Products"},
     {href:"/customers",icon:<Customers/>,label:"Customers"},
     {href:"/reports",icon:<Reports/>,label:"Reports"},

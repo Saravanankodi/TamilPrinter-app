@@ -38,6 +38,14 @@ const AddBill = ({data,setData}:billData) => {
       };
       
     
+    React.useEffect(() => {
+        if (formData.print === "frontAndBack") {
+            setFormData(prev => ({ ...prev, paper: Math.ceil(prev.page / 2) }));
+        } else if (formData.print === "front") {
+            setFormData(prev => ({ ...prev, paper: prev.page }));
+        }
+    }, [formData.page, formData.print]);
+
       const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = Number(e.target.value);
         setFormData(prev => ({
@@ -73,7 +81,7 @@ const AddBill = ({data,setData}:billData) => {
         </header>
         <form onSubmit={handleSubmit}  className='h-max  p-2 space-y-2'>
             <Lable Name='Service Type' value={formData.service || "Select Service Type"}/>
-            <RadioGroup value={formData.service} onValueChange={(e)=>(setFormData((value)=>({...value,service:e})))} name='serviceType' className='w-full h-auto flex gap-2 text-sm' >
+            <RadioGroup value={formData.service} onValueChange={(e)=>(setFormData((value)=>({...value,service:e})))} name='serviceType' className='w-full h-auto flex gap-2 items-center justify-center flex-wrap  text-sm' >
                 <RadioGroup.Item value='A4 Color' label='A4 Color'/>
                 <RadioGroup.Item value='A4 (B/W)' label='A4 (B/W)'/>
                 <RadioGroup.Item value='Xerox' label='Xerox'/>
@@ -81,7 +89,7 @@ const AddBill = ({data,setData}:billData) => {
                 <RadioGroup.Item value='Lamination' label='Lamination'/>
                 <RadioGroup.Item value='Scan' label='Scan'/>
             </RadioGroup>
-            <div className="flex gap-4">
+            <div className="flex items-center justify-center gap-4">
                 <div className="w-auto flex items-end justify-center gap-2">
                     <button
                         onClick={decrement}

@@ -14,6 +14,7 @@ export type CardProps ={
     icon?:React.ReactNode;
     value:string | number;
     disc:string;
+    color?:string;
 }
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
@@ -97,6 +98,9 @@ export interface InvoiceProps {
     customerData: CustomerData;
     billData: BillData[];
     onSaved: () => void;
+    setBillData?: React.Dispatch<React.SetStateAction<BillData[]>>;
+    existingBill?: any;
+    isEditMode?: boolean;
   }
 export type Bill = {
     id: number;

@@ -23,7 +23,7 @@ export default function InvoicePage() {
   return (
     <>
     <section className="w-1/2 h-full">
-      <Invoice billData={items} customerData={customer} onSaved={()=>{}} />
+      <Invoice billData={items} customerData={customer} onSaved={()=>{}} existingBill={bill} />
     </section>
     </>
   );

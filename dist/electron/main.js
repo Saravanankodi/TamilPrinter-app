@@ -76,15 +76,19 @@ electron_2.ipcMain.handle("save-bill", (_, payload) => {
             return sum + quantity * paper * rate;
         }, 0);
         // 3️⃣ Insert bill
+        const now = new Date();
+        const year = String(now.getFullYear()).slice(-2);
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const prefix = `INV-${year}${month}`;
         const lastBill = database_1.db
-            .prepare(`SELECT bill_number FROM bills ORDER BY id DESC LIMIT 1`)
-            .get();
+            .prepare(`SELECT bill_number FROM bills WHERE bill_number LIKE ? ORDER BY id DESC LIMIT 1`)
+            .get(`${prefix}%`);
         let nextNumber = 1;
         if (lastBill) {
-            const lastNum = Number(lastBill.bill_number.replace("INV-", ""));
+            const lastNum = Number(lastBill.bill_number.slice(-4));
             nextNumber = lastNum + 1;
         }
-        const billNumber = `INV-${String(nextNumber).padStart(5, "0")}`;
+        const billNumber = `${prefix}${String(nextNumber).padStart(4, "0")}`;
         const billResult = database_1.db.prepare(`
       INSERT INTO bills (customer_id, bill_number, total, created_at)
       VALUES (?, ?, ?, ?)
@@ -107,6 +111,21 @@ electron_2.ipcMain.handle("save-bill", (_, payload) => {
         return { success: true, billNumber };
     });
     return transaction();
+});
+electron_2.ipcMain.handle("get-next-bill-number", () => {
+    const now = new Date();
+    const year = String(now.getFullYear()).slice(-2);
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const prefix = `INV-${year}${month}`;
+    const lastBill = database_1.db
+        .prepare(`SELECT bill_number FROM bills WHERE bill_number LIKE ? ORDER BY id DESC LIMIT 1`)
+        .get(`${prefix}%`);
+    let nextNumber = 1;
+    if (lastBill) {
+        const lastNum = Number(lastBill.bill_number.slice(-4));
+        nextNumber = lastNum + 1;
+    }
+    return `${prefix}${String(nextNumber).padStart(4, "0")}`;
 });
 electron_2.ipcMain.handle("get-bill-details", (_, billId) => {
     const stmt = database_1.db.prepare(`
@@ -154,6 +173,176 @@ electron_2.ipcMain.handle("get-bills", () => {
         };
     });
     return billsWithStatus;
+});
+// ── Bill Item Edit / Delete ────────────────────────────────────────────────
+electron_2.ipcMain.handle("update-bill-item", (_, item) => {
+    const { id, service, quantity, paper, page, rate, note } = item;
+    // Recalculate amount for the parent bill
+    const updated = database_1.db.prepare(`
+    UPDATE bill_items
+    SET service = ?, quantity = ?, paper = ?, page = ?, rate = ?, note = ?
+    WHERE id = ?
+  `).run(service, quantity, paper, page, rate, note, id);
+    // Update parent bill total
+    const billRow = database_1.db.prepare(`SELECT bill_id FROM bill_items WHERE id = ?`).get(id);
+    if (billRow) {
+        const items = database_1.db.prepare(`SELECT * FROM bill_items WHERE bill_id = ?`).all(billRow.bill_id);
+        const newTotal = items.reduce((s, i) => s + i.quantity * i.paper * i.rate, 0);
+        database_1.db.prepare(`UPDATE bills SET total = ? WHERE id = ?`).run(newTotal, billRow.bill_id);
+        database_1.db.prepare(`UPDATE payments SET amount = ? WHERE bill_id = ?`).run(newTotal, billRow.bill_id);
+    }
+    return { success: updated.changes > 0 };
+});
+electron_2.ipcMain.handle("delete-bill-item", (_, itemId) => {
+    const billRow = database_1.db.prepare(`SELECT bill_id FROM bill_items WHERE id = ?`).get(itemId);
+    const deleted = database_1.db.prepare(`DELETE FROM bill_items WHERE id = ?`).run(itemId);
+    if (billRow) {
+        const items = database_1.db.prepare(`SELECT * FROM bill_items WHERE bill_id = ?`).all(billRow.bill_id);
+        const newTotal = items.reduce((s, i) => s + i.quantity * i.paper * i.rate, 0);
+        database_1.db.prepare(`UPDATE bills SET total = ? WHERE id = ?`).run(newTotal, billRow.bill_id);
+        database_1.db.prepare(`UPDATE payments SET amount = ? WHERE bill_id = ?`).run(newTotal, billRow.bill_id);
+    }
+    return { success: deleted.changes > 0 };
+});
+// ── Payment update ─────────────────────────────────────────────────────────
+electron_2.ipcMain.handle("update-bill-payment", (_, { billId, method }) => {
+    const res = database_1.db.prepare(`UPDATE payments SET method = ? WHERE bill_id = ?`).run(method, billId);
+    return { success: res.changes > 0 };
+});
+// ── Products CRUD ──────────────────────────────────────────────────────────
+electron_2.ipcMain.handle("get-products", () => {
+    return database_1.db.prepare(`SELECT * FROM products ORDER BY id DESC`).all();
+});
+electron_2.ipcMain.handle("get-product", (_, id) => {
+    return database_1.db.prepare(`SELECT * FROM products WHERE id = ?`).get(id);
+});
+electron_2.ipcMain.handle("add-product", (_, product) => {
+    const { name, category, sku, description, pricingModel, costPrice, taxRate, trackStock, currentStock } = product;
+    const res = database_1.db.prepare(`
+    INSERT INTO products (name, category, sku, description, pricing_model, cost_price, tax_rate, track_stock, current_stock, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')
+  `).run(name, category, sku, description, pricingModel, costPrice, taxRate, trackStock ? 1 : 0, currentStock ?? 0);
+    return { id: res.lastInsertRowid };
+});
+electron_2.ipcMain.handle("update-product", (_, product) => {
+    const { id, name, category, sku, description, pricingModel, costPrice, taxRate, trackStock, currentStock, status } = product;
+    const res = database_1.db.prepare(`
+    UPDATE products
+    SET name = ?, category = ?, sku = ?, description = ?, pricing_model = ?,
+        cost_price = ?, tax_rate = ?, track_stock = ?, current_stock = ?, status = ?
+    WHERE id = ?
+  `).run(name, category, sku, description, pricingModel, costPrice, taxRate, trackStock ? 1 : 0, currentStock ?? 0, status, id);
+    return { success: res.changes > 0 };
+});
+electron_2.ipcMain.handle("delete-product", (_, id) => {
+    const res = database_1.db.prepare(`DELETE FROM products WHERE id = ?`).run(id);
+    return { success: res.changes > 0 };
+});
+// ── Reports / Analytics Stats ──────────────────────────────────────────────
+electron_2.ipcMain.handle("get-report-stats", (_, { month, year }) => {
+    // Month is 1-indexed
+    const start = `${year}-${String(month).padStart(2, "0")}-01T00:00:00.000Z`;
+    const endDate = new Date(year, month, 1); // first of next month
+    const end = endDate.toISOString();
+    const bills = database_1.db.prepare(`
+    SELECT b.id, b.total, b.created_at, p.method
+    FROM bills b
+    LEFT JOIN payments p ON p.bill_id = b.id
+    WHERE b.created_at >= ? AND b.created_at < ?
+  `).all(start, end);
+    let monthlyRevenue = 0;
+    let totalPrints = 0;
+    let invoicesGenerated = bills.length;
+    let pending = 0;
+    for (const b of bills) {
+        const isPaid = ["cash", "card", "upi"].includes((b.method || "").toLowerCase());
+        if (isPaid)
+            monthlyRevenue += b.total;
+        else
+            pending += b.total;
+    }
+    // Count items as "prints"
+    const itemsRes = database_1.db.prepare(`
+    SELECT SUM(bi.quantity) as totalQty
+    FROM bill_items bi
+    INNER JOIN bills b ON b.id = bi.bill_id
+    WHERE b.created_at >= ? AND b.created_at < ?
+  `).get(start, end);
+    totalPrints = itemsRes?.totalQty ?? 0;
+    const avgOrderValue = invoicesGenerated > 0 ? monthlyRevenue / invoicesGenerated : 0;
+    // Previous month for comparison
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    const prevStart = `${prevYear}-${String(prevMonth).padStart(2, "0")}-01T00:00:00.000Z`;
+    const prevBills = database_1.db.prepare(`
+    SELECT b.id, b.total, p.method
+    FROM bills b
+    LEFT JOIN payments p ON p.bill_id = b.id
+    WHERE b.created_at >= ? AND b.created_at < ?
+  `).all(prevStart, start);
+    let prevRevenue = 0;
+    for (const b of prevBills) {
+        const isPaid = ["cash", "card", "upi"].includes((b.method || "").toLowerCase());
+        if (isPaid)
+            prevRevenue += b.total;
+    }
+    const revenueChange = prevRevenue === 0 ? 100 : ((monthlyRevenue - prevRevenue) / prevRevenue) * 100;
+    // Daily revenue for chart (last 7 days OR current month days)
+    const dailyRevenue = [];
+    const daysInMonth = new Date(year, month, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dayStart = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}T00:00:00.000Z`;
+        const dayEnd = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}T23:59:59.999Z`;
+        const dayBills = database_1.db.prepare(`
+      SELECT b.total, p.method FROM bills b
+      LEFT JOIN payments p ON p.bill_id = b.id
+      WHERE b.created_at >= ? AND b.created_at <= ?
+    `).all(dayStart, dayEnd);
+        const rev = dayBills.filter(b => ["cash", "card", "upi"].includes((b.method || "").toLowerCase())).reduce((s, b) => s + b.total, 0);
+        dailyRevenue.push({ day: String(d), revenue: rev });
+    }
+    // Service breakdown
+    const serviceRows = database_1.db.prepare(`
+    SELECT bi.service, SUM(bi.quantity * bi.paper * bi.rate) as total
+    FROM bill_items bi
+    INNER JOIN bills b ON b.id = bi.bill_id
+    WHERE b.created_at >= ? AND b.created_at < ?
+    GROUP BY bi.service
+    ORDER BY total DESC
+  `).all(start, end);
+    const serviceTotal = serviceRows.reduce((s, r) => s + r.total, 0);
+    const serviceBreakdown = serviceRows.map(r => ({
+        name: r.service,
+        total: r.total,
+        pct: serviceTotal > 0 ? Math.round((r.total / serviceTotal) * 100) : 0
+    }));
+    // Recent transactions (last 10 in month)
+    const recentTx = database_1.db.prepare(`
+    SELECT b.id, b.bill_number, b.total, b.created_at, c.name AS customer_name, p.method,
+           GROUP_CONCAT(bi.service || ' x' || bi.quantity, ', ') as items
+    FROM bills b
+    LEFT JOIN customers c ON c.id = b.customer_id
+    LEFT JOIN payments p ON p.bill_id = b.id
+    LEFT JOIN bill_items bi ON bi.bill_id = b.id
+    WHERE b.created_at >= ? AND b.created_at < ?
+    GROUP BY b.id
+    ORDER BY b.created_at DESC
+    LIMIT 10
+  `).all(start, end);
+    return {
+        monthlyRevenue,
+        totalPrints,
+        invoicesGenerated,
+        avgOrderValue,
+        revenueChange,
+        pendingPayments: pending,
+        dailyRevenue,
+        serviceBreakdown,
+        recentTransactions: recentTx.map(t => ({
+            ...t,
+            status: ["cash", "card", "upi"].includes((t.method || "").toLowerCase()) ? "Paid" : "Pending"
+        }))
+    };
 });
 electron_2.ipcMain.handle("get-customers", () => {
     const stmt = database_1.db.prepare(`

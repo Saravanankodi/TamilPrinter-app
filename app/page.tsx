@@ -1,134 +1,177 @@
 "use client"
 import { useEffect, useState } from 'react';
-import { Add, Customers, Notification } from "@/assets/icons";
+import { Add, Customers, Notification, Calander, Document, Info } from "@/assets/icons";
 import Card from "@/components/layout/Card";
-import Header from "@/components/layout/Header";
 import RecentInvoice from "@/components/ui/tables/RecentInvoice";
 import { calculateDashboardStats } from '@/utils/dashboard';
+import Link from 'next/link';
+import Cash from '@/assets/icons/Cash';
 
 export default function Home() {
-const [now, setNow] = useState(new Date());
+    const [now, setNow] = useState(new Date());
+    const [invoices, setInvoices] = useState<any[]>([]);
+    const [products, setProducts] = useState<any[]>([]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(new Date());
-    }, 60000); // update every minute
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setNow(new Date());
+        }, 60000);
+        return () => clearInterval(interval);
+    }, []);
 
-    return () => clearInterval(interval);
-  }, []);
+    const dateStr = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
-  const date = new Intl.DateTimeFormat('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  }).format(now);
+    useEffect(() => {
+        async function loadData() {
+            if (window.api?.getBills) {
+                const data = await window.api.getBills();
+                setInvoices(data || []);
+            }
+            if (window.api?.getProducts) {
+                const prodData = await window.api.getProducts();
+                setProducts(prodData || []);
+            }
+        }
+        loadData();
+    }, []);
 
-  const time = new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(now);
-  const [invoices, setInvoices] = useState<any[]>([]);
+    const stats = calculateDashboardStats(invoices);
+    const lowStockItems = products.filter(p => p.track_stock === 1 && p.current_stock < 10);
 
-useEffect(() => {
-  async function loadInvoices() {
-    const data = await window.api.getBills();
-    setInvoices(data);
-  }
-
-  loadInvoices();
-}, []);
-const stats = calculateDashboardStats(invoices);
-  return (
-    <>
-    <section className="w-full h-full max-h-svh  flex flex-col gap-1 text-black">
-      <header className="w-full h-min p-2 flex items-center justify-between bg-white border border-[#00000014]">
-        <aside className="w-fit h-full">
-          <h1 className="text-[20px]">
-            Dashboard
-          </h1>
-          <p className="text-sm">
-            Welcome back, Admin
-          </p>
-        </aside>
-        <div className="w-fit flex items-center gap-2">
-          {/* Date and Time */}
-          <div className="w-fit text-right  border-r pr-6 border-[#00000014]">
-            <h4 className="text-sm font-semibold text-black">
-              {date}
-            </h4>
-            <p className="text-sm">
-              {time}
-            </p>
-          </div>
-          <div className="w-fit h-fit rounded-full bg-[#F1F5F9] p-2 ">
-            <Notification className="w-6 h-6"/>
-          </div>
-        </div>
-      </header>
-      <div className="w-full h-40 flex items-center justify-center gap-6">
-          <Card 
-            label="Today's Revenue"
-            value={`₹${stats.todaysRevenue.toFixed(2)}`}
-            disc={`${stats.percentChange.toFixed(1)}% from yesterday`}
-          />
-
-          <Card 
-            label="Invoices Generated"
-            value={stats.invoicesGenerated.toString()}
-            disc="Today"
-          />
-
-          <Card 
-            label="Monthly Sales"
-            value={`₹${stats.monthlySales.toFixed(2)}`}
-            disc="This month"
-          />
-
-          <Card 
-            label="Payment Pending"
-            value={`₹${stats.pendingPayments.toFixed(2)}`}
-            disc="Unpaid invoices"
-          />
-      </div>
-      <main className="w-full flex-1 grid grid-cols-8 grid-rows-4 gap-4 overflow-hidden pb-4">
-          <RecentInvoice/>
-        <div className="w-full h-full bg-white rounded-md col-span-3 row-span-2 col-start-6 row-start-1">
-          <header className="w-full h-auto px-2 py-3 border-b border-[#00000014] ">
-            <h1 className="text-lg">Quick Actions</h1>
-          </header>
-          <div className=" h-fit flex flex-col gap-2 items-center justify-center p-1">
-            <aside className="w-full h-fit flex-1">
-              <div className="flex items-center gap-5 border border-[#00000014] p-2 rounded-lg">
-                <div className="w-fit h-fit p-1 rounded-md bg-[#0496ff]">
-                  <Add className="w-6 h-6 text-white"/>
+    return (
+        <section className="w-full h-full flex flex-col gap-2 text-black p-4 pt-0 overflow-y-auto">
+            <header className="w-full h-min p-2 flex items-center justify-between bg-white border border-[#00000014]">
+                <aside>
+                    <h1 className="text-2xl font-bold">
+                        Dashboard
+                    </h1>
+                    <p className="text-sm text-gray-500 font-medium">
+                        Welcome back, Admin
+                    </p>
+                </aside>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 px-4 py-2">
+                        <div className="w-fit text-right flex flex-col  border-r pr-6 border-[#00000014]">
+                            <span className="text-sm font-semibold text-black">
+                                {dateStr}
+                            </span>
+                            <span className="text-sm">
+                                {timeStr}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="relative cursor-pointer group hover:bg-[#F1F5F9] transition-all rounded-full p-2 border border-transparent hover:border-gray-200">
+                        <Notification className="w-6 h-6 text-gray-600 transition-colors group-hover:text-blue-600" />
+                        {/* <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white ring-2 ring-red-100 animate-pulse"></span> */}
+                    </div>
                 </div>
-                <div className="w-auto">
-                  <span className="text-base">New Bill</span>
-                  <p className="text-sm">Create invoice for customer</p>
+            </header>
+
+            <div className="w-full h-40 flex items-center justify-center gap-6">
+                <Card 
+                    label="Today's Revenue" 
+                    value={`₹${stats.todaysRevenue.toLocaleString('en-IN')}`} 
+                    disc={`${stats.percentChange >= 0 ? '↗' : '↘'} ${Math.abs(stats.percentChange).toFixed(1)}% vs yesterday`}
+                    color='#10B981'
+                    icon={<Cash className='w-8 h-8 bg-[#EBF8FF] text-[#0B84FF] rounded-md p-2 '/>}
+                />
+                <Card 
+                    label="Invoices Generated" 
+                    value={stats.invoicesGenerated.toString()} 
+                    disc="Today so far"
+                    color='#10B981'
+                    icon={<Document className='w-8 h-8 bg-[#F3F4F6] text-[#374151] rounded-md p-2 '/>}
+                />
+                <Card 
+                    label="Monthly Sales" 
+                    value={`₹${stats.monthlySales.toLocaleString('en-IN')}`} 
+                    disc="Current month billing"
+                    color='#10B981'
+                    icon={<Calander className='w-8 h-8 bg-[#ECFDF5] text-[#059669] rounded-md p-2 '/>}
+                />
+                <Card 
+                    label="Payment Pending" 
+                    value={`₹${stats.pendingPayments.toLocaleString('en-IN')}`} 
+                    disc="Total pending collections" 
+                    color='#EF4444'
+                    icon={<Info className='w-8 h-8 bg-[#FEF2F2] text-[#DC2626] rounded-md p-2 '/>}
+                />
+            </div>
+
+            <main className="w-full max-h-screen grid grid-cols-12 grid-rows-6 gap-4 overflow-hidden pb-4">
+                <div className="col-span-8 row-span-6 flex flex-col gap-2">
+                    <RecentInvoice />
                 </div>
-              </div>
-            </aside>
-            <aside className="w-full h-fit flex-1">
-              <div className="flex items-center gap-5 border border-[#00000014] p-2 rounded-lg">
-                <div className="w-fit h-fit p-1 rounded-md bg-[#F1F5F9]">
-                  <Customers className="w-6 h-6 text-black"/>
-                </div>
-                <div className="w-auto">
-                  <span className="text-base">Add Customer</span>
-                  <p className="text-sm">Register new client</p>
-                </div>
-              </div>
-            </aside>
-          </div>
-        </div>
-        <div className="w-full h-full bg-white rounded-md col-span-3 row-span-2 col-start-6 row-start-3">
-          <header className="w-full h-auto px-2 py-3 border-b border-[#00000014] ">
-            <h1 className="text-lg">Stock Alerts</h1>
-          </header>
-        </div>
-      </main>     
-    </section>
-    </>
-  );
+                    {/* Quick Actions */}
+                    <div className="col-span-4 row-span-3 bg-white rounded-xl shadow-sm border border-[#00000014] overflow-hidden flex flex-col">
+                        <header className="w-full h-auto px-2 py-3 border-b border-[#00000014] ">
+                            <h3 className="font-bold text-lg">
+                                Quick Actions
+                            </h3>
+                        </header>
+                        <div className="p-2 flex flex-col gap-3">
+                            <Link href="/new-bill" className="flex items-center gap-4 p-2 border border-[#E2E8F0] hover:border-blue-400 hover:bg-blue-50/50 rounded-xl transition-all group">
+                                <div className="p-2 rounded-lg bg-blue-100 text-blue-600 group-hover:scale-110 transition-transform">
+                                    <Add className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-sm group-hover:text-blue-700">Create New Bill</h4>
+                                    <p className="text-xs text-gray-500 font-medium">Start a new customer invoice</p>
+                                </div>
+                            </Link>
+                            <Link href="/customers" className="flex items-center gap-4 p-2 border border-[#E2E8F0] hover:border-blue-400 hover:bg-blue-50/50 rounded-xl transition-all group">
+                                <div className="p-2 rounded-lg bg-gray-100 text-gray-600 group-hover:scale-110 transition-transform">
+                                    <Customers className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-sm group-hover:text-blue-700">
+                                        Client Database
+                                    </h4>
+                                    <p className="text-xs text-gray-500 font-medium">
+                                        Manage your customer list
+                                    </p>
+                                </div>
+                            </Link>
+                        </div>
+                    </div>
+
+                    {/* Stock Alerts */}
+                    <div className="col-span-4 row-span-3 w-full h-full bg-white rounded-xl shadow-sm border border-[#00000014] overflow-hidden flex flex-col flex-1 ">
+                        <header className="w-full h-auto px-2 py-3 border-b border-[#00000014]">
+                            <h3 className="font-bold text-lg">
+                                Stock Alerts
+                            </h3>
+                            {lowStockItems.length > 0 && (
+                                <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest">{lowStockItems.length} Low</span>
+                            )}
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                            {lowStockItems.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-gray-400 text-center p-8 gap-3 opacity-60">
+                                    <div className="w-12 h-12 rounded-full border-2 border-gray-200 flex items-center justify-center">✅</div>
+                                    <p className="text-sm font-medium">All items are sufficiently stocked</p>
+                                </div>
+                            ) : (
+                                lowStockItems.map(item => (
+                                    <div key={item.id} className="flex items-center justify-between p-3 border border-red-50 rounded-lg bg-red-50/30">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold text-gray-800 line-clamp-1">{item.name}</span>
+                                            <span className="text-[10px] text-gray-500 uppercase">{item.category}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-xs font-bold text-red-600 p-1 rounded bg-white border border-red-100">{item.current_stock} left</span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        <div className="p-3 bg-[#F8FAFC] border-t">
+                            <Link href="/products" className="text-xs text-blue-600 font-bold hover:underline w-full text-center block uppercase tracking-wider">Manage Inventory</Link>
+                        </div>
+                    </div>
+                
+            </main>     
+        </section>
+    );
 }

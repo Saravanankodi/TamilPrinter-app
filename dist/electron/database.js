@@ -55,6 +55,21 @@ CREATE TABLE IF NOT EXISTS payments (
   FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS products (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  category TEXT,
+  sku TEXT,
+  description TEXT,
+  pricing_model TEXT DEFAULT 'Per Unit / Item',
+  cost_price REAL DEFAULT 0,
+  tax_rate TEXT DEFAULT 'None (0%)',
+  track_stock INTEGER DEFAULT 0,
+  current_stock INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'Active',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_bills_customer_id ON bills(customer_id);
 CREATE INDEX IF NOT EXISTS idx_payments_bill_id ON payments(bill_id);

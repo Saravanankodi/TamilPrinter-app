@@ -3,7 +3,7 @@ import AddBill from '@/components/form/AddBill'
 import CustomerDetails from '@/components/form/CustomerDetails'
 import Invoice from '@/components/layout/Invoice'
 import { BillData } from '@/types'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const NewBill = () => {
   const [customerData,setCustomerData]=useState({
@@ -14,6 +14,20 @@ const NewBill = () => {
   });
 
   const [billData, setBillData] = useState<BillData[]>([]);
+  const [nextBillNumber, setNextBillNumber] = useState<string>("Generating...");
+
+  useEffect(() => {
+    const fetchNextBillNumber = async () => {
+      try {
+        const num = await window.api.getNextBillNumber();
+        setNextBillNumber(num);
+      } catch (err) {
+        console.error("Failed to fetch next bill number:", err);
+      }
+    };
+    fetchNextBillNumber();
+  }, [billData]); 
+
   const resetForm = () => {
     setCustomerData({ name: "", mail: "", phone: "", ref: "" });
     setBillData([]);
@@ -42,7 +56,7 @@ const NewBill = () => {
               Bill No.
             </p>
             <span className="text-base text-black font-semibold">
-              #INV-0102
+              #{nextBillNumber}
             </span>
           </div>
           
@@ -56,7 +70,7 @@ const NewBill = () => {
           <AddBill data={billData} setData={setBillData}/>
         </div>
         <div className="row-span-3 col-span-2 row-start-1 col-start-4 ">
-          <Invoice onSaved={resetForm} customerData={customerData} billData={billData}/>
+          <Invoice onSaved={resetForm} customerData={customerData} billData={billData} setBillData={setBillData} />
         </div>
       </main>
     </section>

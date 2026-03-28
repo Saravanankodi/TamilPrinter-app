@@ -1,55 +1,82 @@
-import html2canvas from "html2canvas";
+// utils/pdfGenerator.ts
+"use client";
+
 import jsPDF from "jspdf";
+import html2canvas from "html2canvas-pro";
 
-export const generatePDF = async (
+export async function generatePDF(
   element: HTMLElement,
-  fileName: string = "invoice.pdf"
-) => {
-  const canvas = await html2canvas(element, {
-    scale: 2,
-    useCORS: true,
+  filename: string = "invoice.pdf",
+  options: {
+    scale?: number;
+    format?: "a4" | "letter" | string;
+    orientation?: "portrait" | "landscape";
+    margin?: number;
+  } = {}
+): Promise<void> {
+  try {
+    const {
+      scale = 2,
+      format = "a4",
+      orientation = "portrait",
+      margin = 10, // default margin
+    } = options;
 
-    onclone: (doc) => {
-      const elements = doc.querySelectorAll("*");
+    // Wait a bit for dynamic content/fonts
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
-      elements.forEach((el) => {
-        if (el instanceof HTMLElement) {
-          const computed = window.getComputedStyle(el);
+    const canvas = await html2canvas(element, {
+      scale,
+      useCORS: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+      ignoreElements: (el) =>
+        el.hasAttribute("data-html2canvas-ignore") ||
+        el.classList.contains("no-print"),
+    });
 
-          // ✅ Replace unsupported colors with safe ones
-          if (computed.color.includes("oklch") || computed.color.includes("lab")) {
-            el.style.color = "#000";
-          }
+    const imgData = canvas.toDataURL("image/png");
 
-          if (
-            computed.backgroundColor.includes("oklch") ||
-            computed.backgroundColor.includes("lab")
-          ) {
-            el.style.backgroundColor = "#fff";
-          }
+    const pdf = new jsPDF({
+      unit: "mm",
+      format,
+      orientation,
+      compress: true,
+    });
 
-          if (
-            computed.borderColor.includes("oklch") ||
-            computed.borderColor.includes("lab")
-          ) {
-            el.style.borderColor = "#000";
-          }
+    const pdfWidth = pdf.internal.pageSize.getWidth() - margin * 2;
+    const pdfHeight = pdf.internal.pageSize.getHeight() - margin * 2;
 
-          // Optional cleanup
-          el.style.boxShadow = "none";
-        }
-      });
-    },
-  });
+    const imgWidth = pdfWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-  const imgData = canvas.toDataURL("image/png");
+    let heightLeft = imgHeight;
+    let position = 0;
 
-  const pdf = new jsPDF("p", "mm", "a4");
+    while (heightLeft > 0) {
+      const drawHeight = Math.min(heightLeft, pdfHeight);
 
-  const imgWidth = 210;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      pdf.addImage(
+        imgData,
+        "PNG",
+        margin,
+        margin,
+        imgWidth,
+        drawHeight,
+        undefined,
+        "FAST"
+      );
 
-  pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+      if (heightLeft > 0) {
+        pdf.addPage();
+        position = 0;
+      }
+    }
 
-  pdf.save(fileName);
-};
+    pdf.save(filename);
+  } catch (err) {
+    console.error("PDF generation failed:", err);
+    alert("Failed to generate PDF. Please try again.");
+  }
+}

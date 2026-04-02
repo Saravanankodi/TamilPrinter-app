@@ -26,8 +26,8 @@ const Dropdown = ({name,option,onChange}:DropdownProps) => {
         className="flex w-full items-center justify-between rounded-md border border-[#00000014]
                   bg-[#F8FAFC] px-4 py-2 text-sm shadow-sm"
       >
-        {select ? select.label : "Select an option"}
-        <span className="ml-2">▾</span>
+        {select ? select.label : "option"}
+        {/* <span className="ml-2">▾</span> */}
       </button>
 
       {open && (

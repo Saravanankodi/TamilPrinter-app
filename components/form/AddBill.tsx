@@ -21,8 +21,8 @@ const AddBill = ({data,setData}:billData) => {
       });
     
     const options = [
-        { label: "Front-only", value: "front" },
-        { label: "Front & Back", value: "frontAndBack" },
+        { label: "Front-only", value: "Front-only" },
+        { label: "Front & Back", value: "Front & Back" },
       ];
       const increment = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
@@ -65,7 +65,7 @@ const AddBill = ({data,setData}:billData) => {
           paper: 0,
           page: 0,
           rate: 0,
-          print: "",
+          print: "option",
           note: ""
         });
       };
@@ -80,7 +80,10 @@ const AddBill = ({data,setData}:billData) => {
             <button className='text-sm text-[#0496ff]  ' >Reset Form</button>
         </header>
         <form onSubmit={handleSubmit}  className='h-max  p-2 space-y-2'>
-            <Lable Name='Service Type' value={formData.service || "Select Service Type"}/>
+            {/* <Lable Name='Service Type' value={formData.service || "Select Service Type"}/> */}
+            <p className="text-sm">
+                Service Type
+            </p>
             <RadioGroup value={formData.service} onValueChange={(e)=>(setFormData((value)=>({...value,service:e})))} name='serviceType' className='w-full h-auto flex gap-2 items-center justify-center flex-wrap  text-sm' >
                 <RadioGroup.Item value='A4 Color' label='A4 Color'/>
                 <RadioGroup.Item value='A4 (B/W)' label='A4 (B/W)'/>
@@ -106,12 +109,12 @@ const AddBill = ({data,setData}:billData) => {
                     </button>
                 </div>
                 <Input label='Page' type='number' value={formData.page} onChange={(e)=>(setFormData((prev)=>({...prev,page:Number(e.target.value)})))} />
-                <Input label='Paper' type='number' value={formData.paper} onChange={(e)=>(setFormData((prev)=>({...prev,paper:Number(e.target.value)})))} />
+                <Dropdown name='Print Type' option={options} onChange={(value)=>setFormData((prev)=>({...prev,print:value}))}/>
                 <Input label='Rate (per unit)' type='number' value={formData.rate} onChange={(e)=>(setFormData((prev)=>({...prev,rate:Number(e.target.value)})))} />
             </div>
 
             <div className="flex items-end gap-3">
-                <Dropdown name='Print Type' option={options} onChange={(value)=>setFormData((prev)=>({...prev,print:value}))}/>
+                <Input label='Paper' type='number' value={formData.paper} onChange={(e)=>(setFormData((prev)=>({...prev,paper:Number(e.target.value)})))} />
                 <Input label='Notes (Optional)' placeholder='Add specific instructions...' value={formData.note} onChange={(e)=>(setFormData((prev)=>({...prev,note:e.target.value})))}/>
             </div>
 

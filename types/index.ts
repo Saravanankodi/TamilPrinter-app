@@ -20,6 +20,7 @@ export type CardProps ={
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
     label?:string;
     error?:string;
+    icon?:React.ReactNode;
 }
 export type RadioGroupContextType = {
     value:string;
@@ -101,6 +102,7 @@ export interface InvoiceProps {
     setBillData?: React.Dispatch<React.SetStateAction<BillData[]>>;
     existingBill?: any;
     isEditMode?: boolean;
+    billId?: number;
   }
 export type Bill = {
     id: number;
@@ -116,6 +118,7 @@ export type Bill = {
   phone: string;
   mail: string;
   totalSpent: number;
+  pending: number;
   lastVisit: string | null;
   created_at?: string;
 };

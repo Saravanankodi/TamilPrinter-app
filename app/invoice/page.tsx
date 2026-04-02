@@ -6,12 +6,27 @@ import { useRouter } from 'next/navigation';
 import Input from '@/components/base/Input';
 import SvgEdit from '@/assets/icons/Edit';
 import Download from '@/assets/icons/Download';
+import Dropdown from '@/components/base/Dropdown';
 
 const AllInvoice = () => {
     const router = useRouter()
     const [bills, setBills] = useState<any[]>([]);
     const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
+    const [paymentFilter, setPaymentFilter] = useState("");
 
+    const options = [
+        { label: "All", value: "" },
+        { label: "Paid", value: "Paid" },
+        { label: "Pending", value: "Pending" },
+      ];
+    const paymentMode = [
+        { label: "All", value: "" },
+        { label: "UPI", value: "UPI" },
+        { label: "Cash", value: "Cash" },
+        { label: "Card", value: "Card" },
+        { label: "Pending", value: "Pending" },
+      ];
     const fetchBills = async () => {
         if (window.api?.getBills) {
             const data = await window.api.getBills();
@@ -23,10 +38,19 @@ const AllInvoice = () => {
         fetchBills();
     }, []);
 
-    const filteredBills = bills.filter(bill => 
-        bill.bill_number?.toLowerCase().includes(search.toLowerCase()) ||
-        bill.customer_name?.toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredBills = bills.filter(bill => {
+        const matchesSearch =
+            bill.bill_number?.toLowerCase().includes(search.toLowerCase()) ||
+            bill.customer_name?.toLowerCase().includes(search.toLowerCase());
+
+        const matchesStatus =
+            statusFilter ? bill.status === statusFilter : true;
+
+        const matchesPayment =
+            paymentFilter ? bill.payment_method === paymentFilter : true;
+
+        return matchesSearch && matchesStatus && matchesPayment;
+    });
 
     const exportToCSV = () => {
         const headers = ["Bill No", "Date", "Customer", "Amount", "Payment", "Status"];
@@ -52,19 +76,14 @@ const AllInvoice = () => {
     };
 
     return (
-        <section className="w-full h-auto p-4 flex flex-col gap-4">
+        <section className="w-full h-auto max-h-screen p-4 flex flex-col gap-4">
             <header className="w-full h-auto p-4 flex items-center justify-between bg-white rounded-lg shadow-sm border border-[#00000014]">
                 <div className="w-auto">
-                    <span className="text-2xl font-bold">All Invoices</span>
-                    <p className="text-sm text-gray-500">View and manage all your past billing transactions.</p>
+                    <h1 className="text-2xl">
+                        Transactions
+                    </h1>
                 </div>
                 <div className="flex gap-3">
-                    <Input 
-                        placeholder="Search invoices..." 
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-64"
-                    />
                     <Button 
                         icon={<DownloadIcon />} 
                         className='text-white' 
@@ -74,10 +93,23 @@ const AllInvoice = () => {
                     </Button>
                 </div>
             </header>
-
-            <main className="w-full bg-white rounded-lg shadow-sm border border-[#00000014] overflow-hidden">
-                <table className="min-w-full text-left">
-                    <thead className="bg-[#F8FAFC] border-b border-[#00000014]">
+            <aside className="w-auto">
+                <span className="text-2xl font-bold">All Invoices</span>
+                <p className="text-sm text-gray-500">View and manage all your past billing transactions.</p>
+            </aside>
+            <aside className="w-full h-auto flex items-center gap-5 flex-wrap">
+                <Input 
+                    placeholder="Search invoices..." 
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="max-w-80"
+                />
+                <Dropdown name='' option={options} onChange={(value) => setStatusFilter(value)}/>
+                <Dropdown name='' option={paymentMode} onChange={(value) => setPaymentFilter(value)}/>
+            </aside>
+            <main className="w-full bg-white rounded-lg shadow-sm border border-[#00000014] overflow-scroll no-scrollbar">
+                <table className="min-w-full text-left overflow-auto">
+                    <thead className="bg-[#F8FAFC] border-b border-[#00000014] sticky top-0">
                         <tr>
                             <th className="px-4 py-3 text-sm font-semibold text-gray-600">Bill No</th>
                             <th className="px-4 py-3 text-sm font-semibold text-gray-600">Date & Time</th>

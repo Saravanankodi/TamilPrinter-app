@@ -16,7 +16,7 @@ const Dropdown = ({name,option,onChange}:DropdownProps) => {
 
   return (
     <>
-    <div className="relative w-64">
+    <div className="relative w-full max-w-64">
       <p className="text-sm">
         {name}
       </p>
@@ -24,7 +24,7 @@ const Dropdown = ({name,option,onChange}:DropdownProps) => {
         type='button'
         onClick={() => setOpen(!open)}
         className="flex w-full items-center justify-between rounded-md border border-[#00000014]
-                   bg-[#FAFBFC] px-4 py-2 text-sm shadow-sm"
+                  bg-[#F8FAFC] px-4 py-2 text-sm shadow-sm"
       >
         {select ? select.label : "Select an option"}
         <span className="ml-2">▾</span>
@@ -32,7 +32,7 @@ const Dropdown = ({name,option,onChange}:DropdownProps) => {
 
       {open && (
         <ul className="absolute z-10 mt-1 w-full rounded-md border
-                       border-gray-200 bg-white shadow-lg">
+                       border-[#00000014] bg-[#F8FAFC] shadow-lg">
           {option.map((option) => (
             <li
               key={option.value}

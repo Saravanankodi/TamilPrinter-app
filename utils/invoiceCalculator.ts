@@ -10,7 +10,7 @@ export function calculateInvoice(items: BillData[]): CalculationResult {
   }, 0);
 
   // GST is 18% of subtotal
-  const tax = parseFloat((subtotal * 0.18).toFixed(2));
+  const tax = parseFloat((subtotal * 0).toFixed(2));
 
   const grandTotal = parseFloat((subtotal + tax).toFixed(2));
 

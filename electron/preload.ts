@@ -3,7 +3,8 @@ import { contextBridge, ipcRenderer } from "electron";
 contextBridge.exposeInMainWorld("api", {
   // Bills
   saveBill: (data: any) => ipcRenderer.invoke("save-bill", data),
-  getBills: () => ipcRenderer.invoke("get-bills"),
+  updateBill: (data: any) => ipcRenderer.invoke("update-bill", data),
+  getBills: (filters?: any) => ipcRenderer.invoke("get-bills", filters),
   getBillDetails: (id: number) => ipcRenderer.invoke("get-bill-details", id),
   exportBills: () => ipcRenderer.invoke("export-bills"),
 

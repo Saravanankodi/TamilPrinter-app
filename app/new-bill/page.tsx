@@ -34,7 +34,7 @@ const NewBill = () => {
   };
   return (
     <>
-    <section className="w-full h-max max-h-screen ">
+    <section className="w-full h-max max-h-screen overflow-scroll no-scrollbar">
       <header className="w-full p-2 flex items-center justify-between bg-white border border-[#00000014]">
         <aside className="w-fit h-full">
           <div className="h-fit flex items-center gap-2">

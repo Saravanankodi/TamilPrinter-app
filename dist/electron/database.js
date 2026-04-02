@@ -9,8 +9,17 @@ const path_1 = __importDefault(require("path"));
 const electron_1 = require("electron");
 // Database file location
 const dbPath = path_1.default.join(electron_1.app.getPath("userData"), "printout.db");
-// Create database
-exports.db = new better_sqlite3_1.default(dbPath);
+// Create database with a timeout to handle busy scenarios
+exports.db = new better_sqlite3_1.default(dbPath, { timeout: 20000 });
+// Enable WAL mode to allow concurrent reads/writes
+try {
+    exports.db.pragma('journal_mode = WAL');
+    exports.db.pragma('busy_timeout = 20000');
+    exports.db.pragma('synchronous = NORMAL');
+}
+catch (e) {
+    console.warn("Failed to set WAL mode:", e);
+}
 console.log("Database created at:", dbPath);
 // Create tables
 exports.db.exec(`
@@ -31,6 +40,7 @@ CREATE TABLE IF NOT EXISTS bills (
   bill_number TEXT UNIQUE,
   total REAL NOT NULL,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
 );
 
@@ -70,8 +80,33 @@ CREATE TABLE IF NOT EXISTS products (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS bill_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bill_id INTEGER NOT NULL,
+  action TEXT NOT NULL,
+  snapshot TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE CASCADE
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_bills_customer_id ON bills(customer_id);
 CREATE INDEX IF NOT EXISTS idx_payments_bill_id ON payments(bill_id);
 CREATE INDEX IF NOT EXISTS idx_bills_created_at ON bills(created_at);
 `);
+// Safe migration for updated_at column
+try {
+    const tableInfo = exports.db.prepare("PRAGMA table_info(bills)").all();
+    const hasUpdatedAt = tableInfo.some(col => col.name === 'updated_at');
+    if (!hasUpdatedAt) {
+        console.log("[Migration] Adding updated_at column to bills table...");
+        exports.db.exec("ALTER TABLE bills ADD COLUMN updated_at TEXT;");
+        console.log("[Migration] Column added successfully.");
+    }
+    else {
+        console.log("[Migration] Column updated_at already exists.");
+    }
+}
+catch (error) {
+    console.error("[Migration Error] Failed to alter table:", error);
+}

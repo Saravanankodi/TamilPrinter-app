@@ -21,20 +21,22 @@ export default function EditInvoice() {
 
   const [billData, setBillData] = useState<BillData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [existingBill, setExistingBill] = useState<any>(null);
 
   useEffect(() => {
     async function fetchDetails() {
       if (window.api?.getBillDetails) {
         try {
           const data = await window.api.getBillDetails(billId);
-          if (data && data.bill) {
+          if (data && data.customer) {
             setCustomerData({
-              name: data.bill.customer_name || '',
-              phone: data.bill.customer_phone || '',
-              mail: data.bill.customer_mail || '',
-              ref: ''
+              name: data.customer.name || '',
+              phone: data.customer.phone || '',
+              mail: data.customer.mail || '',
+              ref: data.customer.ref || ''
             });
             setBillData(data.items || []);
+            setExistingBill(data.bill); 
           }
         } catch (e) {
           console.error(e);
@@ -64,9 +66,9 @@ export default function EditInvoice() {
         <button onClick={() => router.back()} className="text-gray-400 hover:text-red-500 transition-colors text-3xl font-light">&times;</button>
       </header>
 
-      <div className="flex-1 w-full grid grid-cols-11 gap-0 overflow-hidden">
+      <div className="flex-1 w-full grid grid-cols-12 gap-0 overflow-hidden">
         {/* Left Side: Form */}
-        <div className="col-span-5 flex flex-col gap-4 p-6 overflow-y-auto border-r border-[#E2E8F0] bg-white">
+        <div className="col-span-6 flex flex-col gap-4 p-6 overflow-y-auto border-r border-[#E2E8F0] bg-white no-scrollbar">
           <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl mb-4">
              <p className="text-sm text-orange-800 font-medium">⚠️ Editing an archived invoice. Any changes will update the reports permanently.</p>
           </div>
@@ -82,6 +84,8 @@ export default function EditInvoice() {
               onSaved={handleSaved} 
               setBillData={setBillData} 
               isEditMode={true}
+              existingBill={existingBill}
+              billId={billId}
             />
           </div>
         </div>

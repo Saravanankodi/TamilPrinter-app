@@ -21,15 +21,15 @@ const RecentInvoice = () => {
       }, []);
       
   return (
-    <section className="w-full h-full bg-white rounded-xl shadow-sm border border-[#00000014] overflow-hidden flex flex-col">
+    <section className="w-full h-full bg-white rounded-xl shadow-sm border border-[#00000014] overflow-hidden flex flex-col no-scrollbar">
         <header className="w-full flex items-center justify-between px-1 py-2 border-b border-[#00000014]">
             <h1 className="text-lg font-bold">Recent Invoices</h1>
             <Button variant="outline" onClick={() => router.push("/invoice")} className="text-xs bg-white text-gray-600 border-gray-300 hover:bg-gray-50 transition-colors">
                 View All
             </Button>
         </header>
-        <div className="flex-1 overflow-y-auto">
-            <Table className="w-full text-left">
+        <div className="flex-1 overflow-y-auto no-scrollbar">
+            <Table className="w-full text-left ">
                 <thead className="sticky top-0 bg-[#F8FAFC] border-b border-[#F1F5F9] z-10">
                     <Table.Row>
                         <Table.Cell className="text-xs font-bold text-[#667085] tracking-wider">Bill ID</Table.Cell>
@@ -40,7 +40,7 @@ const RecentInvoice = () => {
                         <Table.Cell className="text-xs font-bold text-[#667085] tracking-wider text-right">Actions</Table.Cell>
                     </Table.Row>
                 </thead>
-                <tbody className="divide-y divide-[#F1F5F9]">
+                <tbody className="divide-y divide-[#F1F5F9] no-scrollbar">
                     {bills.map((bill) => (
                         <Table.Row 
                             key={bill.id} 

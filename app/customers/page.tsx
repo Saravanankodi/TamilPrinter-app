@@ -36,13 +36,14 @@ const Customers = () => {
     );
 
     const exportToCSV = () => {
-        const headers = ["Customer Name", "Contact", "Email", "Last Visit", "Total Spent"];
+        const headers = ["Customer Name", "Contact", "Email", "Last Visit", "Total Spent", "Pending Amount"];
         const rows = filteredCustomers.map(c => [
             c.name,
             c.phone,
             c.mail,
             c.lastVisit ? new Date(c.lastVisit).toLocaleDateString() : "--",
-            c.totalSpent
+            c.totalSpent,
+            c.pending
         ]);
 
         const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
@@ -58,7 +59,7 @@ const Customers = () => {
     };
 
     return (
-        <section className="w-full max-h-screen space-y-2.5">
+        <section className="w-full h-auto max-h-screen p-4 flex flex-col gap-4 no-scrollbar">
             <header className="w-full py-4 px-4 flex items-center justify-between bg-white rounded-lg shadow-sm border border-[#00000014]">
                 <aside className="w-fit h-full">
                     <h1 className="text-2xl font-bold">Customers</h1>
@@ -73,21 +74,21 @@ const Customers = () => {
                     </Button>
                 </div>
             </header>
-            <main className="w-full flex flex-col gap-4">
-                <Input 
+            <Input 
                     placeholder="Search customers..." 
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="max-w-100"
-                />
-                <main className="w-full max-h-[75vh] bg-white rounded-lg shadow-sm border border-[#00000014] overflow-auto">
-                    <Table className='h-full'>
+                />                
+                <main className="w-full bg-white rounded-lg shadow-sm border border-[#00000014] overflow-scroll no-scrollbar">
+                    <Table className='no-scrollbar'>
                         <Table.Head>
                             <Table.Row>
                                 <Table.Th className="px-4 py-3">Customer Name</Table.Th>
                                 <Table.Th className="px-4 py-3">Contact</Table.Th>
                                 <Table.Th className="px-4 py-3">Last Visit</Table.Th>
                                 <Table.Th className="px-4 py-3">Total Spent</Table.Th>
+                                <Table.Th className="px-4 py-3">Pending Amount</Table.Th>
                             </Table.Row>
                         </Table.Head>
                         <tbody>
@@ -119,6 +120,9 @@ const Customers = () => {
                                         <Table.Cell className="px-4 py-3 font-semibold text-[#111827] text-sm">
                                             ₹{(customer.totalSpent ?? 0).toLocaleString('en-IN')}
                                         </Table.Cell>
+                                        <Table.Cell className="px-4 py-3 font-semibold text-[#111827] text-sm">
+                                            ₹{(customer.pending ?? 0).toLocaleString('en-IN')}
+                                        </Table.Cell>
                                     </Table.Row>
                                 ))
                             )}
@@ -130,7 +134,6 @@ const Customers = () => {
                         </div>
                     )}
                 </main>
-            </main>
         </section>
     )
 }

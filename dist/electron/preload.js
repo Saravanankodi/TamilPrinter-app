@@ -4,7 +4,8 @@ const electron_1 = require("electron");
 electron_1.contextBridge.exposeInMainWorld("api", {
     // Bills
     saveBill: (data) => electron_1.ipcRenderer.invoke("save-bill", data),
-    getBills: () => electron_1.ipcRenderer.invoke("get-bills"),
+    updateBill: (data) => electron_1.ipcRenderer.invoke("update-bill", data),
+    getBills: (filters) => electron_1.ipcRenderer.invoke("get-bills", filters),
     getBillDetails: (id) => electron_1.ipcRenderer.invoke("get-bill-details", id),
     exportBills: () => electron_1.ipcRenderer.invoke("export-bills"),
     // Bill Items

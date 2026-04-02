@@ -13,8 +13,10 @@ import Swal from 'sweetalert2';
 import { showAlert } from '@/utils/Alert';
 import { calculateInvoice } from '@/utils/invoiceCalculator';
 import { generatePDF } from '@/utils/pdfGenerator';
+import SvgDelete from '@/assets/icons/Delete';
+import SvgEdit from '@/assets/icons/Edit';
 
-const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillData, existingBill}) => {
+const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillData, existingBill, isEditMode, billId}) => {
 
         const invoiceRef = useRef<HTMLDivElement>(null);
         const [value,setValue] = useState("");
@@ -24,7 +26,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
 
         useEffect(() => {
             const fetchNextBill = async () => {
-                if (!billNumber && !existingBill) {
+                if (!isEditMode && !billNumber && !existingBill) {
                     try {
                         const nextBill = await window.api.getNextBillNumber();
                         setBillNumber(nextBill);
@@ -35,6 +37,12 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
             };
             fetchNextBill();
         }, [billNumber, existingBill]);
+
+        useEffect(() => {
+            if (isEditMode && existingBill?.bill_number) {
+                setBillNumber(existingBill.bill_number);
+            }
+        }, [isEditMode, existingBill]);
 
         useEffect(() => {
             if (shouldDownload && invoiceRef.current) {
@@ -61,10 +69,19 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
         }, []);
 
         useEffect(() => {
-                if(!existingBill) setValue("");
-        }, [customerData, existingBill]);
+            if (isEditMode && existingBill?.payment_method) {
+                const method = existingBill.payment_method.toLowerCase();
+                if (method.includes('cash')) setValue('Cash');
+                else if (method.includes('upi')) setValue('UPI');
+                else if (method.includes('card')) setValue('Card');
+                else setValue('Pending');
+            } else if (!existingBill) {
+                setValue("");
+            }
+        }, [customerData, existingBill, isEditMode]);
 
         const saveBill = async () => {
+            console.log({ isEditMode, billId });
             if (!billData || billData.length === 0) {
                 await showAlert({
                 icon: 'info',
@@ -86,30 +103,39 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
             }
 
             try {
-                const result = await window.api.saveBill({
-                customer: customerData,
-                items: billData,
-                paymentMethod: value,
-                });
-
-                setBillNumber(result.billNumber);
+                let result;
+                if (isEditMode && billId) {
+                    result = await window.api.updateBill({
+                        billId: billId,
+                        customer: customerData,
+                        items: billData,
+                        paymentMethod: value,
+                    });
+                } else {
+                    result = await window.api.saveBill({
+                        customer: customerData,
+                        items: billData,
+                        paymentMethod: value,
+                    });
+                    setBillNumber(result.billNumber);
+                }
 
                 await showAlert({
                 icon: 'success',
-                title: 'Bill Saved',
-                text: `Bill number: ${result.billNumber}`,
+                title: isEditMode ? 'Bill Updated' : 'Bill Saved',
+                text: isEditMode ? 'Bill updated successfully' : `Bill number: ${result?.billNumber}`,
                 confirmText: 'OK',
                 });
 
                 // ✅ trigger AFTER state update
                 setShouldDownload(true);
 
-            } catch (err) {
+            } catch (err: any) {
                 console.error(err);
                 await showAlert({
                 icon: 'error',
                 title: 'Error',
-                text: 'Failed to save bill. Please try again.',
+                text: err.message || 'Failed to save bill. Please try again.',
                 confirmText: 'OK',
                 });
             }
@@ -125,7 +151,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                 <h1 className="text-sm">
                     Current Bill
                 </h1>
-                <h1 className="text-sm">
+                <h1 className="text-lg">
                     Tamil Printers
                 </h1>
             </aside>
@@ -160,7 +186,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                                 <Table.Th>Paper</Table.Th>
                                 <Table.Th>Rate</Table.Th>
                                 <Table.Th>Amount</Table.Th>
-                                {setBillData && <Table.Th data-html2canvas-ignore>Actions</Table.Th>}
+                                {setBillData && <th className='text-left px-4 py-2 text-[#8B95A6]' data-html2canvas-ignore>Actions</th>}
                             </Table.Row>
                             {Array.isArray(billData) && billData.map((data)=>(
                                 <Table.Row key={data.id}>
@@ -182,7 +208,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                                         {data.quantity * (data.paper || 1) * data.rate}
                                     </Table.Cell>
                                     {setBillData && (
-                                        <Table.Cell data-html2canvas-ignore>
+                                        <td data-html2canvas-ignore>
                                             <div className="flex items-center gap-2">
                                                     <button onClick={() => {
                                                         const handleEdit = () => {
@@ -191,16 +217,16 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                                                                 html: `
                                                                     <div class="flex flex-col gap-4 text-left">
                                                                         <div class="space-y-1">
-                                                                            <label class="text-xs text-gray-400">Quantity</label>
-                                                                            <input id="swal-input-qty" type="number" value="${data.quantity}" class="w-full bg-gray-700/50 border border-gray-600 rounded p-2 text-white outline-none focus:border-purple-500" />
+                                                                            <label class="text-[#64748B] text-sm block my-1">Quantity</label>
+                                                                            <input id="swal-input-qty" type="number" value="${data.quantity}" class="bg-[#F8FAFC] max-h-10 w-full outline-none border border-[#00000014] text-sm p-2 rounded-md " />
                                                                         </div>
                                                                         <div class="space-y-1">
-                                                                            <label class="text-xs text-gray-400">Paper (Multiplier)</label>
-                                                                            <input id="swal-input-paper" type="number" value="${data.paper}" class="w-full bg-gray-700/50 border border-gray-600 rounded p-2 text-white outline-none focus:border-purple-500" />
+                                                                            <label class="text-[#64748B] text-sm block my-1">Paper (Multiplier)</label>
+                                                                            <input id="swal-input-paper" type="number" value="${data.paper}" class="bg-[#F8FAFC] max-h-10 w-full outline-none border border-[#00000014] text-sm p-2 rounded-md " />
                                                                         </div>
                                                                         <div class="space-y-1">
-                                                                            <label class="text-xs text-gray-400">Rate (Price per item)</label>
-                                                                            <input id="swal-input-rate" type="number" value="${data.rate}" class="w-full bg-gray-700/50 border border-gray-600 rounded p-2 text-white outline-none focus:border-purple-500" />
+                                                                            <label class="text-[#64748B] text-sm block my-1">Rate (Price per item)</label>
+                                                                            <input id="swal-input-rate" type="number" value="${data.rate}" class="bg-[#F8FAFC] max-h-10 w-full outline-none border border-[#00000014] text-sm p-2 rounded-md " />
                                                                         </div>
                                                                     </div>
                                                                 `,
@@ -211,7 +237,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                                                                 customClass: {
                                                                     popup: 'bg-[#1E1E2E] rounded-xl p-6 shadow-2xl border border-gray-700',
                                                                     title: 'text-xl font-bold text-white mb-4',
-                                                                    confirmButton: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold px-6 py-2 rounded hover:opacity-90 transition-opacity',
+                                                                    confirmButton: 'bg-[#0B76FF] text-white font-semibold px-6 py-2 rounded hover:opacity-90 transition-opacity',
                                                                     cancelButton: 'bg-gray-700 text-gray-300 font-semibold px-6 py-2 rounded hover:bg-gray-600 transition-colors',
                                                                     actions: 'mt-6 flex gap-3'
                                                                 },
@@ -244,10 +270,14 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                                                             });
                                                         };
                                                         handleEdit();
-                                                    }} className="text-blue-500 hover:text-blue-700">Edit</button>
-                                                <button onClick={() => setBillData(prev => prev.filter(item => item.id !== data.id))} className="text-red-500 hover:text-red-700">Delete</button>
+                                                    }} className="text-blue-500 hover:text-blue-700">
+                                                        <SvgEdit className='w-5 h-5'/>
+                                                    </button>
+                                                <button onClick={() => setBillData(prev => prev.filter(item => item.id !== data.id))} className="text-red-500 hover:text-red-700">
+                                                    <SvgDelete className='w-5 h-5'/>
+                                                </button>
                                             </div>
-                                        </Table.Cell>
+                                        </td>
                                     )}
                                 </Table.Row>
                             ))}                    
@@ -256,7 +286,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                 </main>
 
                 <aside className="w-full mt-auto flex flex-col gap-5 justify-center items-center mx-auto pt-6 pb-2">
-                    <div className="w-full h-auto space-y-2">
+                    <div className="w-full h-auto space-y-4">
                         
                         <div className="w-full h-min flex items-center justify-between">
                             <p className="text-xs">
@@ -270,11 +300,11 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                             <p className="text-xs">
                                 Tax
                             </p>
-                            <h4 className="text-xs">
+                            <p className="text-xs">
                                 ₹{BillTotal.tax}
-                            </h4>
+                            </p>
                         </div>
-                        <div className="w-full h-min flex items-center justify-between">
+                        <div className="w-full h-min flex items-center justify-between border-y border-[#00000014] py-2">
                             <h4 className="text-sm">
                                 Grand Total
                             </h4>
@@ -283,10 +313,15 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                             </h4>
                         </div>
                     </div>
-                    {existingBill ? (
+                    {(existingBill && !isEditMode) ? (
                         <div className="w-full flex flex-col items-center gap-4">
-                            <div className='w-full text-center text-sm font-semibold'>
-                                Payment Method: {existingBill.payment_method}
+                                <div className='w-full text-center text-sm font-semibold'>
+                                    <RadioGroup value={value} onValueChange={setValue} name='serviceType' className='w-full h-auto flex items-center justify-center gap-2 text-sm mx-auto' >
+                                    <RadioGroup.Item value='Cash' label='Cash' icon={<Cash/>} />
+                                    <RadioGroup.Item value='UPI' label='UPI / QR' icon={<Upi/>} />
+                                    <RadioGroup.Item value='Card' label='Card' icon={<Card/>}/>
+                                    <RadioGroup.Item value='Pending' label='Pending'/>
+                                </RadioGroup>
                             </div>
                             <div data-html2canvas-ignore className="w-full flex justify-center">
                                 <Button variant='primary' icon={<Print className='w-6 h-6'/>} onClick={() => setShouldDownload(true)} className='w-4/5'>
@@ -295,7 +330,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                             </div>
                         </div>
                     ) : (
-                        <div data-html2canvas-ignore className="w-full flex flex-col items-center gap-4">
+                        <div className="w-full flex flex-col items-center gap-4">
                             <RadioGroup value={value} onValueChange={setValue} name='serviceType' className='w-full h-auto flex items-center justify-center gap-2 text-sm mx-auto' >
                                 <RadioGroup.Item value='Cash' label='Cash' icon={<Cash/>} />
                                 <RadioGroup.Item value='UPI' label='UPI / QR' icon={<Upi/>} />
@@ -303,8 +338,8 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                                 <RadioGroup.Item value='Pending' label='Pending'/>
                             </RadioGroup>
 
-                            <Button variant='primary' icon={<Print className='w-6 h-6'/>} onClick={saveBill} className='w-4/5'>
-                                Generate & Print Invoice
+                            <Button data-html2canvas-ignore variant='primary' icon={<Print className='w-6 h-6'/>} onClick={saveBill} className='w-4/5'>
+                                {isEditMode ? 'Update & Print Invoice' : 'Generate & Print Invoice'}
                             </Button>
                         </div>
                     )}

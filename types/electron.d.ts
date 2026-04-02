@@ -4,7 +4,8 @@ declare global {
   interface Window {
     api: {
       saveBill: (data: any) => Promise<any>;
-      getBills: () => Promise<any[]>;
+      updateBill: (data: any) => Promise<any>;
+      getBills: (filters?: any) => Promise<any[]>;
       getBillDetails: (id: number) => Promise<any>;
       getNextBillNumber: () => Promise<string>;
       updateBillItem: (item: any) => Promise<{ success: boolean }>;

@@ -16,14 +16,15 @@ import { generatePDF } from '@/utils/pdfGenerator';
 import SvgDelete from '@/assets/icons/Delete';
 import SvgEdit from '@/assets/icons/Edit';
 
-const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillData, existingBill, isEditMode, billId}) => {
+const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillData, existingBill, isEditMode, billId,paymentMethod}) => {
 
         const invoiceRef = useRef<HTMLDivElement>(null);
-        const [value,setValue] = useState("");
+        const [value,setValue] = useState(paymentMethod?.method || "");
         const [currentTime, setCurrentTime] = useState<Date>(new Date());
         const [billNumber, setBillNumber] = useState<string | null>(existingBill?.bill_number || null);
         const [shouldDownload, setShouldDownload] = useState(false);
 
+        // console.log(paymentMethod?.method)
         useEffect(() => {
             const fetchNextBill = async () => {
                 if (!isEditMode && !billNumber && !existingBill) {
@@ -43,6 +44,12 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                 setBillNumber(existingBill.bill_number);
             }
         }, [isEditMode, existingBill]);
+
+        useEffect(() => {
+            if (paymentMethod) {
+                setValue(paymentMethod?.method);
+            }
+        }, [paymentMethod]);
 
         useEffect(() => {
             if (shouldDownload && invoiceRef.current) {
@@ -68,17 +75,17 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
             return () => clearInterval(timer);
         }, []);
 
-        useEffect(() => {
-            if (isEditMode && existingBill?.payment_method) {
-                const method = existingBill.payment_method.toLowerCase();
-                if (method.includes('cash')) setValue('Cash');
-                else if (method.includes('upi')) setValue('UPI');
-                else if (method.includes('card')) setValue('Card');
-                else setValue('Pending');
-            } else if (!existingBill) {
-                setValue("");
-            }
-        }, [customerData, existingBill, isEditMode]);
+        // useEffect(() => {
+        //     if (isEditMode && existingBill?.payment_method) {
+        //         const method = existingBill.payment_method.toLowerCase();
+        //         if (method.includes('cash')) setValue('Cash');
+        //         else if (method.includes('upi')) setValue('UPI');
+        //         else if (method.includes('card')) setValue('Card');
+        //         else setValue('Pending');
+        //     } else if (!existingBill) {
+        //         setValue("");
+        //     }
+        // }, [customerData, existingBill, isEditMode]);
 
         const saveBill = async () => {
             console.log({ isEditMode, billId });
@@ -107,8 +114,6 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                 if (isEditMode && billId) {
                     result = await window.api.updateBill({
                         billId: billId,
-                        customer: customerData,
-                        items: billData,
                         paymentMethod: value,
                     });
                 } else {
@@ -146,12 +151,12 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
   return (
     <>
     <section ref={invoiceRef} className="w-full h-full relative flex flex-col rounded-lg bg-white p-2 ">
-        <header className="w-full h-auto border-b border-b-[#00000014] p-4">
-            <aside className="flex justify-between">
-                <h1 className="text-sm">
+        <header className="w-full h-auto border-b border-b-[#00000014] px-4 py-2">
+            <aside className="flex justify-between items-center">
+                <h1 className="text-sm text-[#64748B] ">
                     Current Bill
                 </h1>
-                <h1 className="text-lg">
+                <h1 className="text-xl">
                     Tamil Printers
                 </h1>
             </aside>
@@ -165,7 +170,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                     <p className="text-sm">
                         {existingBill?.created_at ? new Date(existingBill.created_at).toLocaleDateString("en-IN") : currentTime?.toLocaleDateString("en-IN")}
                     </p>
-                    <p className="text-sm">
+                    <p className="text-xs">
                         {existingBill?.created_at ? new Date(existingBill.created_at).toLocaleTimeString() : currentTime?.toLocaleTimeString()}
                     </p>
                 </div>
@@ -205,7 +210,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                                         {data.rate}
                                     </Table.Cell>
                                     <Table.Cell>
-                                        {data.quantity * (data.paper || 1) * data.rate}
+                                        {data.amount || data.quantity * (data.paper || 1) * data.rate}
                                     </Table.Cell>
                                     {setBillData && (
                                         <td data-html2canvas-ignore>
@@ -228,6 +233,10 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                                                                             <label class="text-[#64748B] text-sm block my-1">Rate (Price per item)</label>
                                                                             <input id="swal-input-rate" type="number" value="${data.rate}" class="bg-[#F8FAFC] max-h-10 w-full outline-none border border-[#00000014] text-sm p-2 rounded-md " />
                                                                         </div>
+                                                                        <div class="space-y-1">
+                                                                            <label class="text-[#64748B] text-sm block my-1">Rate (Price per item)</label>
+                                                                            <input id="swal-input-amount" type="number" value="${data.amount}" class="bg-[#F8FAFC] max-h-10 w-full outline-none border border-[#00000014] text-sm p-2 rounded-md " />
+                                                                        </div>
                                                                     </div>
                                                                 `,
                                                                 focusConfirm: false,
@@ -246,6 +255,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                                                                     const qty = (document.getElementById('swal-input-qty') as HTMLInputElement).value;
                                                                     const paper = (document.getElementById('swal-input-paper') as HTMLInputElement).value;
                                                                     const rate = (document.getElementById('swal-input-rate') as HTMLInputElement).value;
+                                                                    const amount = (document.getElementById('swal-input-amount') as HTMLInputElement).value;
                                                                     
                                                                     if (!qty || !paper || !rate) {
                                                                         Swal.showValidationMessage('Please fill all fields');
@@ -255,15 +265,16 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                                                                     return {
                                                                         quantity: Number(qty),
                                                                         paper: Number(paper),
-                                                                        rate: Number(rate)
+                                                                        rate: Number(rate),
+                                                                        amount: Number(amount)
                                                                     }
                                                                 }
                                                             }).then((result) => {
                                                                 if (result.isConfirmed && result.value && setBillData) {
-                                                                    const { quantity, paper, rate } = result.value;
+                                                                    const { quantity, paper, rate, amount } = result.value;
                                                                     setBillData(prev => prev.map(item => 
                                                                         item.id === data.id 
-                                                                            ? { ...item, quantity, paper, rate } 
+                                                                            ? { ...item, quantity, paper, rate, amount } 
                                                                             : item
                                                                     ));
                                                                 }

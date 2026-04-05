@@ -123,7 +123,10 @@ electron_2.ipcMain.handle("get-bill-details", (_, billId) => {
     const customer = database_1.db
         .prepare(`SELECT * FROM customers WHERE id = ?`)
         .get(bill.customer_id);
-    return { bill, items, customer };
+    const payment = database_1.db
+        .prepare(`SELECT method FROM payments WHERE bill_id = ?`)
+        .get(billId);
+    return { bill, items, customer, paymentMethod: payment || "Pending" };
 });
 electron_2.ipcMain.handle("get-bills", (_, filters) => {
     let query = `
@@ -168,67 +171,25 @@ electron_2.ipcMain.handle("get-bills", (_, filters) => {
 });
 // ── Bill Update API ────────────────────────────────────────────────────────
 electron_2.ipcMain.handle("update-bill", (_, payload) => {
-    const { billId, customer, items, paymentMethod } = payload;
-    if (!billId || !customer?.phone || !items?.length) {
+    const { billId, paymentMethod } = payload;
+    if (!billId || !paymentMethod) {
         throw new Error("Invalid bill update data");
     }
     const transaction = database_1.db.transaction(() => {
-        // 1️⃣ Check if paid
         const currentPayment = database_1.db.prepare(`SELECT method FROM payments WHERE bill_id = ?`).get(billId);
-        if (currentPayment && ["cash", "card", "upi"].includes((currentPayment.method || "").toLowerCase())) {
-            throw new Error("Cannot edit a paid invoice");
-        }
-        // 2️⃣ Fetch old data for snapshot
-        const oldBill = database_1.db.prepare(`SELECT * FROM bills WHERE id = ?`).get(billId);
-        const oldItems = database_1.db.prepare(`SELECT * FROM bill_items WHERE bill_id = ?`).all(billId);
-        const oldCustomer = database_1.db.prepare(`SELECT * FROM customers WHERE id = ?`).get(oldBill?.customer_id || 0);
-        // Insert history before update
-        const oldSnapshot = JSON.stringify({
-            customer: oldCustomer,
-            items: oldItems,
-            total: oldBill?.total,
-            paymentMethod: currentPayment?.method,
-        });
-        database_1.db.prepare(`
-      INSERT INTO bill_history (bill_id, action, snapshot, created_at)
-      VALUES (?, 'UPDATED', ?, ?)
-    `).run(billId, oldSnapshot, new Date().toISOString());
-        // 3️⃣ Update customer or link new
-        const existingCustomer = database_1.db.prepare(`SELECT id FROM customers WHERE phone = ?`).get(customer.phone);
-        let customerId;
-        if (existingCustomer) {
-            customerId = existingCustomer.id;
-            database_1.db.prepare(`UPDATE customers SET name = ?, mail = ?, ref = ? WHERE id = ?`)
-                .run(customer.name, customer.mail, customer.ref, customerId);
-        }
-        else {
-            const insertCustomer = database_1.db.prepare(`INSERT INTO customers (name, mail, phone, ref) VALUES (?, ?, ?, ?)`)
-                .run(customer.name, customer.mail, customer.phone, customer.ref);
-            customerId = Number(insertCustomer.lastInsertRowid);
-        }
-        // 4️⃣ Replace items and calculate total
-        database_1.db.prepare(`DELETE FROM bill_items WHERE bill_id = ?`).run(billId);
-        let newTotal = 0;
-        const itemStmt = database_1.db.prepare(`INSERT INTO bill_items (bill_id, service, quantity, paper, page, rate, note) VALUES (?, ?, ?, ?, ?, ?, ?)`);
-        for (const item of items) {
-            const quantity = Number(item.quantity) || 0;
-            const paper = Number(item.paper) || 0;
-            const rate = Number(item.rate) || 0;
-            newTotal += quantity * paper * rate;
-            itemStmt.run(billId, item.service, quantity, paper, item.page, rate, item.note);
-        }
-        // 5️⃣ Update bill
-        database_1.db.prepare(`UPDATE bills SET customer_id = ?, total = ?, updated_at = ? WHERE id = ?`)
-            .run(customerId, newTotal, new Date().toISOString(), billId);
-        // 6️⃣ Update payment
-        const paymentExists = database_1.db.prepare(`SELECT id FROM payments WHERE bill_id = ?`).get(billId);
-        if (paymentExists) {
-            database_1.db.prepare(`UPDATE payments SET method = ?, amount = ? WHERE bill_id = ?`)
-                .run(paymentMethod, newTotal, billId);
-        }
-        else {
-            database_1.db.prepare(`INSERT INTO payments (bill_id, method, amount) VALUES (?, ?, ?)`)
-                .run(billId, paymentMethod, newTotal);
+        const oldMethod = currentPayment ? currentPayment.method : null;
+        if (oldMethod !== paymentMethod) {
+            if (currentPayment) {
+                database_1.db.prepare(`UPDATE payments SET method = ? WHERE bill_id = ?`).run(paymentMethod, billId);
+            }
+            else {
+                const bill = database_1.db.prepare(`SELECT total FROM bills WHERE id = ?`).get(billId);
+                database_1.db.prepare(`INSERT INTO payments (bill_id, method, amount) VALUES (?, ?, ?)`).run(billId, paymentMethod, bill?.total || 0);
+            }
+            database_1.db.prepare(`
+        INSERT INTO payment_history (bill_id, old_payment_method, new_payment_method, updated_at)
+        VALUES (?, ?, ?, ?)
+      `).run(billId, oldMethod, paymentMethod, new Date().toISOString());
         }
         return { success: true, billId };
     });
@@ -323,7 +284,7 @@ electron_2.ipcMain.handle("get-report-stats", (_, { month, year }) => {
     }
     // Count items as "prints"
     const itemsRes = database_1.db.prepare(`
-    SELECT SUM(bi.quantity) as totalQty
+    SELECT SUM(bi.quantity * bi.paper) as totalQty
     FROM bill_items bi
     INNER JOIN bills b ON b.id = bi.bill_id
     WHERE b.created_at >= ? AND b.created_at < ?
@@ -492,6 +453,7 @@ function createWindow() {
             nodeIntegration: false,
         },
     });
+    mainWindow.setMenuBarVisibility(false);
     const isDev = !electron_1.app.isPackaged;
     if (isDev) {
         mainWindow.loadURL("http://localhost:3000");

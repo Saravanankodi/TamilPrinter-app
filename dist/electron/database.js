@@ -89,6 +89,16 @@ CREATE TABLE IF NOT EXISTS bill_history (
   FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS payment_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bill_id INTEGER NOT NULL,
+  old_payment_method TEXT,
+  new_payment_method TEXT NOT NULL,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE CASCADE
+);
+
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_bills_customer_id ON bills(customer_id);
 CREATE INDEX IF NOT EXISTS idx_payments_bill_id ON payments(bill_id);

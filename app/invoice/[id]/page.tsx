@@ -18,12 +18,12 @@ export default function InvoicePage() {
 
   if (!data) return <p>Loading...</p>;
 
-  const { bill, customer, items } = data;
-
+  const { bill, customer, items, paymentMethod } = data;
+  
   return (
     <>
     <section className="w-1/2 h-full">
-      <Invoice billData={items} customerData={customer} onSaved={()=>{}} existingBill={bill} />
+      <Invoice billData={items} customerData={customer} onSaved={()=>{}} existingBill={bill} paymentMethod={paymentMethod} />
     </section>
     </>
   );

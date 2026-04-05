@@ -17,12 +17,15 @@ const AddBill = ({data,setData}:billData) => {
         page: 0,
         rate: 0,
         print: "",
+        amount:"",
         note: ""
       });
     
     const options = [
+        { label: "Select", value: "" },
         { label: "Front-only", value: "Front-only" },
         { label: "Front & Back", value: "Front & Back" },
+        { label: "Booklet", value: "Booklet" },
       ];
       const increment = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
@@ -39,9 +42,11 @@ const AddBill = ({data,setData}:billData) => {
       
     
     React.useEffect(() => {
-        if (formData.print === "frontAndBack") {
+        if (formData.print === "Booklet") {
+            setFormData(prev => ({ ...prev, paper: Math.ceil(prev.page / 4) }));
+        } else if (formData.print === "Front & Back") {
             setFormData(prev => ({ ...prev, paper: Math.ceil(prev.page / 2) }));
-        } else if (formData.print === "front") {
+        } else if (formData.print === "Front-only") {
             setFormData(prev => ({ ...prev, paper: prev.page }));
         }
     }, [formData.page, formData.print]);
@@ -64,8 +69,9 @@ const AddBill = ({data,setData}:billData) => {
           quantity: 1,
           paper: 0,
           page: 0,
+          amount:"",
           rate: 0,
-          print: "option",
+          print: "",
           note: ""
         });
       };
@@ -100,7 +106,7 @@ const AddBill = ({data,setData}:billData) => {
                     >
                         -
                     </button>
-                    <Input label='Quantity' type='number' value={formData.quantity} onChange={handleChange} />
+                    <Input label='Quantity' type='number' value={formData.quantity} onChange={handleChange} required />
                     <button
                         onClick={increment}
                         className="px-4 py-2 bg-[#F8FAFC] max-h-10  outline-none border border-[#00000014] text-sm rounded-md "
@@ -108,14 +114,14 @@ const AddBill = ({data,setData}:billData) => {
                         +
                     </button>
                 </div>
-                <Input label='Page' type='number' value={formData.page} onChange={(e)=>(setFormData((prev)=>({...prev,page:Number(e.target.value)})))} />
-                <Dropdown name='Print Type' option={options} onChange={(value)=>setFormData((prev)=>({...prev,print:value}))}/>
-                <Input label='Rate (per unit)' type='number' value={formData.rate} onChange={(e)=>(setFormData((prev)=>({...prev,rate:Number(e.target.value)})))} />
+                <Input label='Page' type='number' value={formData.page} onChange={(e)=>(setFormData((prev)=>({...prev,page:Number(e.target.value)})))} required/>
+                <Dropdown name='Print Type' option={options} value={formData.print} onChange={(value)=>setFormData((prev)=>({...prev,print:value}))}/>
+                <Input label='Rate (per paper)' type='number' value={formData.rate} onChange={(e)=>(setFormData((prev)=>({...prev,rate:Number(e.target.value)})))} required />
             </div>
 
             <div className="flex items-end gap-3">
-                <Input label='Paper' type='number' value={formData.paper} onChange={(e)=>(setFormData((prev)=>({...prev,paper:Number(e.target.value)})))} />
-                <Input label='Notes (Optional)' placeholder='Add specific instructions...' value={formData.note} onChange={(e)=>(setFormData((prev)=>({...prev,note:e.target.value})))}/>
+                <Input label='Paper' type='number' value={formData.paper} onChange={(e)=>(setFormData((prev)=>({...prev,paper:Number(e.target.value)})))} required/>
+                <Input label='Name (Optional)' placeholder='Add specific instructions...' value={formData.note} onChange={(e)=>(setFormData((prev)=>({...prev,note:e.target.value})))}/>
             </div>
 
             <Button type='submit' icon={<AddRounded/>} className='w-full font-semibold' variant='secondary'>

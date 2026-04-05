@@ -58,6 +58,7 @@ export type Option ={
 export type DropdownProps ={
     name:string;
     option: Option[];
+    value:string;
     onChange:(value:string)=> void;
 }
 export type customerData ={
@@ -94,6 +95,7 @@ export interface CustomerData {
     rate: number;
     print: string;
     note: string;
+    amount: string;
   }
 export interface InvoiceProps {
     customerData: CustomerData;
@@ -103,6 +105,7 @@ export interface InvoiceProps {
     existingBill?: any;
     isEditMode?: boolean;
     billId?: number;
+    paymentMethod?:any;
   }
 export type Bill = {
     id: number;

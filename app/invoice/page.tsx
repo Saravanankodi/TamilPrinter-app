@@ -104,8 +104,8 @@ const AllInvoice = () => {
                     onChange={(e) => setSearch(e.target.value)}
                     className="max-w-80"
                 />
-                <Dropdown name='' option={options} onChange={(value) => setStatusFilter(value)}/>
-                <Dropdown name='' option={paymentMode} onChange={(value) => setPaymentFilter(value)}/>
+                <Dropdown name='' option={options} value={statusFilter} onChange={(value) => setStatusFilter(value)}/>
+                <Dropdown name='' option={paymentMode} value={paymentFilter} onChange={(value) => setPaymentFilter(value)}/>
             </aside>
             <main className="w-full bg-white rounded-lg shadow-sm border border-[#00000014] overflow-scroll no-scrollbar">
                 <table className="min-w-full text-left overflow-auto">

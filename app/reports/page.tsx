@@ -94,8 +94,8 @@ const Reports = () => {
                 </div>
             </header>
 
-            <div className="grid grid-cols-6 grid-rows-2 gap-6">
-                <div className="w-auto col-span-2">
+            <div className="grid grid-cols-3 grid-rows-2 gap-6">
+                <div className="w-auto">
                     <Card 
                         label="Monthly Revenue" 
                         value={`₹${stats.monthlyRevenue.toLocaleString('en-IN')}`} 
@@ -103,15 +103,7 @@ const Reports = () => {
                         icon={<SvgRs className='w-6 h-6 text-[#0B76FF] '/>}
                     />
                 </div>
-                <div className="w-auto col-span-2">
-                    <Card 
-                        label="Total Prints" 
-                        value={stats.totalPrints.toLocaleString('en-IN')} 
-                        disc="This month" 
-                        icon={<SvgPaper className='w-6 h-6 text-[#0B76FF] '/>}
-                    />
-                </div>
-                <div className="w-auto col-span-2">
+                <div className="w-auto">
                     <Card 
                         label="Invoices Generated" 
                         value={stats.invoicesGenerated.toLocaleString('en-IN')} 
@@ -119,17 +111,25 @@ const Reports = () => {
                         icon={<SvgDoc className='w-6 h-6 text-[#0B76FF] '/>}
                     />
                 </div>
-                <div className="w-auto row-start-2 row-end-3 col-span-3 ">
+                <div className="w-auto">
                     <Card 
-                        label="Avg. Order Value" 
+                        label="Total Prints" 
+                        value={stats.totalPrints.toLocaleString('en-IN')} 
+                        disc="This month" 
+                        icon={<SvgPaper className='w-6 h-6 text-[#0B76FF] '/>}
+                    />
+                </div>
+                <div className="w-auto row-start-2 row-end-3 col-start-1 col-end-3">
+                    <Card 
+                        label="Total Income" 
                         value={`₹${Math.round(stats.avgOrderValue).toLocaleString('en-IN')}`} 
                         disc="" 
                         icon={<SvgAvgOrder className='w-6 h-6 text-[#0B76FF] '/>}
                     />
                 </div>
-                <div className="w-auto row-start-2 row-end-3 col-span-3">
+                <div className="w-auto row-start-2 row-end-3 col-start-2 col-end-4">
                     <Card 
-                        label="Avg. Order Value" 
+                        label="Total Pending" 
                         value={`₹${Math.round(stats.avgOrderValue).toLocaleString('en-IN')}`} 
                         disc="" 
                         icon={<SvgAvgOrder className='w-6 h-6 text-[#0B76FF] '/>}

@@ -179,8 +179,10 @@ ipcMain.handle("get-bill-details", (_, billId: number) => {
   const customer = db
     .prepare(`SELECT * FROM customers WHERE id = ?`)
     .get(bill.customer_id);
-
-  return { bill, items, customer };
+  const payment = db
+  .prepare(`SELECT method FROM payments WHERE bill_id = ?`)
+  .get(billId);
+  return { bill, items, customer, paymentMethod: payment || "Pending" };
 });
 
 ipcMain.handle("get-bills", (_, filters?: { paymentMethod?: string, status?: string }) => {
@@ -232,73 +234,28 @@ ipcMain.handle("get-bills", (_, filters?: { paymentMethod?: string, status?: str
 // ── Bill Update API ────────────────────────────────────────────────────────
 
 ipcMain.handle("update-bill", (_, payload) => {
-  const { billId, customer, items, paymentMethod } = payload;
+  const { billId, paymentMethod } = payload;
 
-  if (!billId || !customer?.phone || !items?.length) {
+  if (!billId || !paymentMethod) {
     throw new Error("Invalid bill update data");
   }
 
   const transaction = db.transaction(() => {
-    // 1️⃣ Check if paid
     const currentPayment = db.prepare(`SELECT method FROM payments WHERE bill_id = ?`).get(billId) as { method: string } | undefined;
-    if (currentPayment && ["cash", "card", "upi"].includes((currentPayment.method || "").toLowerCase())) {
-      throw new Error("Cannot edit a paid invoice");
-    }
+    const oldMethod = currentPayment ? currentPayment.method : null;
 
-    // 2️⃣ Fetch old data for snapshot
-    const oldBill = db.prepare(`SELECT * FROM bills WHERE id = ?`).get(billId) as any;
-    const oldItems = db.prepare(`SELECT * FROM bill_items WHERE bill_id = ?`).all(billId);
-    const oldCustomer = db.prepare(`SELECT * FROM customers WHERE id = ?`).get(oldBill?.customer_id || 0);
-    
-    // Insert history before update
-    const oldSnapshot = JSON.stringify({
-      customer: oldCustomer,
-      items: oldItems,
-      total: oldBill?.total,
-      paymentMethod: currentPayment?.method,
-    });
-    db.prepare(`
-      INSERT INTO bill_history (bill_id, action, snapshot, created_at)
-      VALUES (?, 'UPDATED', ?, ?)
-    `).run(billId, oldSnapshot, new Date().toISOString());
+    if (oldMethod !== paymentMethod) {
+      if (currentPayment) {
+        db.prepare(`UPDATE payments SET method = ? WHERE bill_id = ?`).run(paymentMethod, billId);
+      } else {
+        const bill = db.prepare(`SELECT total FROM bills WHERE id = ?`).get(billId) as { total: number } | undefined;
+        db.prepare(`INSERT INTO payments (bill_id, method, amount) VALUES (?, ?, ?)`).run(billId, paymentMethod, bill?.total || 0);
+      }
 
-    // 3️⃣ Update customer or link new
-    const existingCustomer = db.prepare(`SELECT id FROM customers WHERE phone = ?`).get(customer.phone) as { id: number } | undefined;
-    let customerId: number;
-    if (existingCustomer) {
-      customerId = existingCustomer.id;
-      db.prepare(`UPDATE customers SET name = ?, mail = ?, ref = ? WHERE id = ?`)
-        .run(customer.name, customer.mail, customer.ref, customerId);
-    } else {
-      const insertCustomer = db.prepare(`INSERT INTO customers (name, mail, phone, ref) VALUES (?, ?, ?, ?)`)
-        .run(customer.name, customer.mail, customer.phone, customer.ref);
-      customerId = Number(insertCustomer.lastInsertRowid);
-    }
-
-    // 4️⃣ Replace items and calculate total
-    db.prepare(`DELETE FROM bill_items WHERE bill_id = ?`).run(billId);
-    let newTotal = 0;
-    const itemStmt = db.prepare(`INSERT INTO bill_items (bill_id, service, quantity, paper, page, rate, note) VALUES (?, ?, ?, ?, ?, ?, ?)`);
-    for (const item of items) {
-      const quantity = Number(item.quantity) || 0;
-      const paper = Number(item.paper) || 0;
-      const rate = Number(item.rate) || 0;
-      newTotal += quantity * paper * rate;
-      itemStmt.run(billId, item.service, quantity, paper, item.page, rate, item.note);
-    }
-
-    // 5️⃣ Update bill
-    db.prepare(`UPDATE bills SET customer_id = ?, total = ?, updated_at = ? WHERE id = ?`)
-      .run(customerId, newTotal, new Date().toISOString(), billId);
-
-    // 6️⃣ Update payment
-    const paymentExists = db.prepare(`SELECT id FROM payments WHERE bill_id = ?`).get(billId) as { id: number } | undefined;
-    if (paymentExists) {
-      db.prepare(`UPDATE payments SET method = ?, amount = ? WHERE bill_id = ?`)
-        .run(paymentMethod, newTotal, billId);
-    } else {
-      db.prepare(`INSERT INTO payments (bill_id, method, amount) VALUES (?, ?, ?)`)
-        .run(billId, paymentMethod, newTotal);
+      db.prepare(`
+        INSERT INTO payment_history (bill_id, old_payment_method, new_payment_method, updated_at)
+        VALUES (?, ?, ?, ?)
+      `).run(billId, oldMethod, paymentMethod, new Date().toISOString());
     }
 
     return { success: true, billId };
@@ -411,7 +368,7 @@ ipcMain.handle("get-report-stats", (_, { month, year }: { month: number; year: n
 
   // Count items as "prints"
   const itemsRes = db.prepare(`
-    SELECT SUM(bi.quantity) as totalQty
+    SELECT SUM(bi.quantity * bi.paper) as totalQty
     FROM bill_items bi
     INNER JOIN bills b ON b.id = bi.bill_id
     WHERE b.created_at >= ? AND b.created_at < ?
@@ -610,7 +567,7 @@ function createWindow() {
       nodeIntegration: false,
     },
   });
-
+  mainWindow.setMenuBarVisibility(false);
   const isDev = !app.isPackaged;
 
   if (isDev) {

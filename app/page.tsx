@@ -1,16 +1,23 @@
 "use client"
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Add, Customers, Notification, Calander, Document, Info } from "@/assets/icons";
 import Card from "@/components/layout/Card";
 import RecentInvoice from "@/components/ui/tables/RecentInvoice";
 import { calculateDashboardStats } from '@/utils/dashboard';
 import Link from 'next/link';
 import Cash from '@/assets/icons/Cash';
+import Download from '@/assets/icons/Download';
+import SvgDoc from '@/assets/icons/Doc';
+import { generatePDF } from '@/utils/pdfGenerator';
+import TodayIncome from '@/components/form/TodayIncome';
 
 export default function Home() {
     const [now, setNow] = useState(new Date());
     const [invoices, setInvoices] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
+    const [totalPrints, setTotalPrints] = useState(0);
+    const [showIncomePopup, setShowIncomePopup] = useState(false);
+    const dashboardRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -32,6 +39,13 @@ export default function Home() {
                 const prodData = await window.api.getProducts();
                 setProducts(prodData || []);
             }
+            if (window.api?.getReportStats) {
+                const d = new Date();
+                const stats = await window.api.getReportStats({ month: d.getMonth() + 1, year: d.getFullYear() });
+                if (stats && stats.totalPrints !== undefined) {
+                    setTotalPrints(stats.totalPrints);
+                }
+            }
         }
         loadData();
     }, []);
@@ -40,8 +54,8 @@ export default function Home() {
     const lowStockItems = products.filter(p => p.track_stock === 1 && p.current_stock < 10);
 
     return (
-        <section className="w-full h-full flex flex-col gap-2 text-black p-4 pt-0 overflow-y-auto">
-            <header className="w-full h-min p-2 flex items-center justify-between bg-white border border-[#00000014]">
+        <section ref={dashboardRef} className="w-full h-full flex flex-col gap-2 text-black p-4 pt-0 overflow-y-auto relative">
+            <header data-html2canvas-ignore className="w-full h-min p-2 flex items-center justify-between bg-white border border-[#00000014]">
                 <aside>
                     <h1 className="text-2xl font-bold">
                         Dashboard
@@ -61,8 +75,11 @@ export default function Home() {
                             </span>
                         </div>
                     </div>
-                    <div className="relative cursor-pointer group hover:bg-[#F1F5F9] transition-all rounded-full p-2 border border-transparent hover:border-gray-200">
-                        <Notification className="w-6 h-6 text-gray-600 transition-colors group-hover:text-blue-600" />
+                    <div 
+                        className="relative cursor-pointer group hover:bg-[#F1F5F9] transition-all rounded-full p-2 border border-transparent hover:border-gray-200"
+                        onClick={() => dashboardRef.current && generatePDF(dashboardRef.current, `Dashboard_${dateStr.replace(/ /g, '_')}.pdf`)}
+                    >
+                        <Download className="w-6 h-6 text-gray-600 transition-colors group-hover:text-blue-600" />
                         {/* <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white ring-2 ring-red-100 animate-pulse"></span> */}
                     </div>
                 </div>
@@ -84,6 +101,13 @@ export default function Home() {
                     icon={<Document className='w-8 h-8 bg-[#F3F4F6] text-[#374151] rounded-md p-2 '/>}
                 />
                 <Card 
+                    label="Total Paper Print" 
+                    value={totalPrints.toString()} 
+                    disc="This month" 
+                    color='#10B981'
+                    icon={<SvgDoc className='w-8 h-8 bg-[#FEF2F2] rounded-md p-2 '/>}
+                />
+                <Card 
                     label="Monthly Sales" 
                     value={`₹${stats.monthlySales.toLocaleString('en-IN')}`} 
                     disc="Current month billing"
@@ -103,7 +127,7 @@ export default function Home() {
                     <RecentInvoice />
                 </div>
                     {/* Quick Actions */}
-                    <div className="col-span-4 row-span-3 bg-white rounded-xl shadow-sm border border-[#00000014] overflow-hidden flex flex-col">
+                    <div className="col-span-4 row-span-3 bg-white rounded-xl shadow-sm border border-[#00000014] overflow-scroll no-scrollbar flex flex-col">
                         <header className="w-full h-auto px-2 py-3 border-b border-[#00000014] ">
                             <h3 className="font-bold text-lg">
                                 Quick Actions
@@ -132,6 +156,19 @@ export default function Home() {
                                     </p>
                                 </div>
                             </Link>
+                            <button onClick={() => setShowIncomePopup(true)} className="flex items-center gap-4 p-2 border border-[#E2E8F0] hover:border-blue-400 hover:bg-blue-50/50 rounded-xl transition-all group">
+                                <div className="p-2 rounded-lg bg-gray-100 text-gray-600 group-hover:scale-110 transition-transform">
+                                    <Customers className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-sm group-hover:text-blue-700">
+                                        Today Income
+                                    </h4>
+                                    <p className="text-xs text-gray-500 font-medium">
+                                        View today's earnings
+                                    </p>
+                                </div>
+                            </button>
                         </div>
                     </div>
 
@@ -170,7 +207,15 @@ export default function Home() {
                         </div>
                     </div>
                 
-            </main>     
+            </main>
+            {
+                showIncomePopup && (
+                <div className="w-auto absolute top-1/2 left-1/2 -translate-1/2 z-11">
+                    <TodayIncome/>
+                </div>
+            )
+            }
+
         </section>
     );
 }

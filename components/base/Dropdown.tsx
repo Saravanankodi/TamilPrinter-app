@@ -4,7 +4,7 @@ import { DropdownProps, Option } from '@/types'
 import React, { useState } from 'react'
 
 
-const Dropdown = ({name,option,onChange}:DropdownProps) => {
+const Dropdown = ({name,option,value,onChange}:DropdownProps) => {
     const [open,setOpen] = useState(false);
     const [select,setSelect] = useState<Option | null>(null)
 
@@ -13,7 +13,7 @@ const Dropdown = ({name,option,onChange}:DropdownProps) => {
         onChange(option.value)
         setOpen(false)
     }
-
+    const selectedOption = option.find(o => o.value === value);
   return (
     <>
     <div className="relative w-full max-w-64">
@@ -26,7 +26,7 @@ const Dropdown = ({name,option,onChange}:DropdownProps) => {
         className="flex w-full items-center justify-between rounded-md border border-[#00000014]
                   bg-[#F8FAFC] px-4 py-2 text-sm shadow-sm"
       >
-        {select ? select.label : "option"}
+         {selectedOption ? selectedOption.label : "Select"}
         {/* <span className="ml-2">▾</span> */}
       </button>
 

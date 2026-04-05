@@ -44,6 +44,7 @@ function RadioGroupItem({
           checked={checked}
           onChange={() => ctx.onValueChange(value)}
           className="sr-only"
+          required
         />
         {icon && (
           <span className="w-8 h-8 p-1">

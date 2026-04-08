@@ -126,7 +126,10 @@ electron_2.ipcMain.handle("get-bill-details", (_, billId) => {
     const payment = database_1.db
         .prepare(`SELECT method FROM payments WHERE bill_id = ?`)
         .get(billId);
-    return { bill, items, customer, paymentMethod: payment || "Pending" };
+    const paymentHistory = database_1.db
+        .prepare(`SELECT old_payment_method, new_payment_method, updated_at FROM payment_history WHERE bill_id = ? ORDER BY updated_at DESC`)
+        .all(billId);
+    return { bill, items, customer, paymentMethod: payment || "Pending", paymentHistory };
 });
 electron_2.ipcMain.handle("get-bills", (_, filters) => {
     let query = `

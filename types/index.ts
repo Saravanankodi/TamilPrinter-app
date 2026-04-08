@@ -95,7 +95,7 @@ export interface CustomerData {
     rate: number;
     print: string;
     note: string;
-    amount: string;
+    amount: string | number;
   }
 export interface InvoiceProps {
     customerData: CustomerData;
@@ -106,6 +106,7 @@ export interface InvoiceProps {
     isEditMode?: boolean;
     billId?: number;
     paymentMethod?:any;
+    paymentHistory?: any[];
   }
 export type Bill = {
     id: number;

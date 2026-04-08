@@ -139,16 +139,18 @@ const AllInvoice = () => {
                                 </td>
                                 <td className="px-4 py-3 text-sm text-right">
                                     <div className="flex justify-end gap-2">
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                router.push(`/invoice/${bill.id}/edit`); // Assuming edit page exists or will be added
-                                            }}
-                                            className="p-1 hover:bg-blue-50 text-blue-600 rounded"
-                                            title="Edit"
-                                        >
-                                            <SvgEdit className='w-5 h-5'/>
-                                        </button>
+                                        {bill.status !== "Paid" && (
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    router.push(`/invoice/${bill.id}/edit`); // Assuming edit page exists or will be added
+                                                }}
+                                                className="p-1 hover:bg-blue-50 text-blue-600 rounded"
+                                                title="Edit"
+                                            >
+                                                <SvgEdit className='w-5 h-5'/>
+                                            </button>
+                                        )}
                                         <button 
                                             onClick={(e) => {
                                                 e.stopPropagation();

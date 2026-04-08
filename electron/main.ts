@@ -182,7 +182,10 @@ ipcMain.handle("get-bill-details", (_, billId: number) => {
   const payment = db
   .prepare(`SELECT method FROM payments WHERE bill_id = ?`)
   .get(billId);
-  return { bill, items, customer, paymentMethod: payment || "Pending" };
+  const paymentHistory = db
+    .prepare(`SELECT old_payment_method, new_payment_method, updated_at FROM payment_history WHERE bill_id = ? ORDER BY updated_at DESC`)
+    .all(billId);
+  return { bill, items, customer, paymentMethod: payment || "Pending", paymentHistory };
 });
 
 ipcMain.handle("get-bills", (_, filters?: { paymentMethod?: string, status?: string }) => {

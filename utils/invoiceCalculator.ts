@@ -2,10 +2,14 @@ import { BillData, CalculationResult } from "@/types";
 
 export function calculateInvoice(items: BillData[]): CalculationResult {
   const subtotal = items.reduce((acc, item) => {
+    if (item.amount !== "") {
+      return acc + Number(item.amount);
+    }
     // Multiply by paper if needed, or fallback to 1 if paper is 0 or undefined for things that don't use paper
     const quantity = item.quantity || 1;
     const paper = item.paper || 1; 
     const rate = item.rate || 0;
+    
     return acc + (quantity * paper * rate);
   }, 0);
 

@@ -16,7 +16,7 @@ import { generatePDF } from '@/utils/pdfGenerator';
 import SvgDelete from '@/assets/icons/Delete';
 import SvgEdit from '@/assets/icons/Edit';
 
-const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillData, existingBill, isEditMode, billId,paymentMethod}) => {
+const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillData, existingBill, isEditMode, billId,paymentMethod, paymentHistory}) => {
 
         const invoiceRef = useRef<HTMLDivElement>(null);
         const [value,setValue] = useState(paymentMethod?.method || "");
@@ -51,12 +51,13 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
             }
         }, [paymentMethod]);
 
+        const today = new Date().toLocaleDateString("en-GB")
         useEffect(() => {
             if (shouldDownload && invoiceRef.current) {
                 const timer = setTimeout(async () => {
                 await generatePDF(
                     invoiceRef.current!,
-                    `${customerData.name || "invoice"}.pdf`
+                    `${customerData.name + '_' + today || "invoice"}.pdf`
                 );
 
                 setShouldDownload(false);
@@ -76,8 +77,8 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
         }, []);
 
         // useEffect(() => {
-        //     if (isEditMode && existingBill?.payment_method) {
-        //         const method = existingBill.payment_method.toLowerCase();
+        //     if (isEditMode && paymentHistory) {
+        //         const method = paymentHistory.toLowerCase();
         //         if (method.includes('cash')) setValue('Cash');
         //         else if (method.includes('upi')) setValue('UPI');
         //         else if (method.includes('card')) setValue('Card');
@@ -147,7 +148,6 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
         };
 
         const BillTotal = calculateInvoice(billData)
-            
   return (
     <>
     <section ref={invoiceRef} className="w-full h-full relative flex flex-col rounded-lg bg-white p-2 ">
@@ -324,6 +324,23 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                             </h4>
                         </div>
                     </div>
+                    {paymentHistory && paymentHistory.length > 0 && (
+                        <div className="w-full h-auto space-y-2 border-t border-[#00000014] pt-2 mt-2">
+                            <h2 className="text-base font-bold uppercase tracking-wider mb-1">Payment History</h2>
+                            <div className="flex flex-col gap-1.5">
+                                {paymentHistory.map((history, idx) => (
+                                    <div key={idx} className="flex justify-between items-center text-sm text-gray-600 bg-gray-50 p-1.5 rounded border border-gray-100">
+                                        <span className="font-medium">{new Date(history.updated_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                        <div className="flex items-center gap-1.5 font-medium text-sm">
+                                            <span className="text-gray-400">{history.old_payment_method || "None"}</span>
+                                            <span className="text-gray-400">&rarr;</span>
+                                            <span className="text-blue-600">{history.new_payment_method}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     {(existingBill && !isEditMode) ? (
                         <div className="w-full flex flex-col items-center gap-4">
                                 <div className='w-full text-center text-sm font-semibold'>

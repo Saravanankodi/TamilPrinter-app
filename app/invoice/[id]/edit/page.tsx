@@ -23,6 +23,7 @@ export default function EditInvoice() {
   const [payment,setPayment] = useState("")
   const [loading, setLoading] = useState(true);
   const [existingBill, setExistingBill] = useState<any>(null);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetchDetails() {
@@ -39,6 +40,7 @@ export default function EditInvoice() {
             setBillData(data.items || []);
             setPayment(data.paymentMethod)
             setExistingBill(data.bill); 
+            setPaymentHistory(data.paymentHistory || []);
           }
         } catch (e) {
           console.error(e);
@@ -82,6 +84,7 @@ export default function EditInvoice() {
             existingBill={existingBill}
             paymentMethod={payment}
             billId={billId}
+            paymentHistory={paymentHistory}
           />
         </div>
       </div>

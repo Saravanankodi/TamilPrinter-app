@@ -94,47 +94,43 @@ const Reports = () => {
                 </div>
             </header>
 
-            <div className="grid grid-cols-3 grid-rows-2 gap-6">
-                <div className="w-auto">
-                    <Card 
-                        label="Monthly Revenue" 
-                        value={`₹${stats.monthlyRevenue.toLocaleString('en-IN')}`} 
-                        disc={stats.revenueChange >= 0 ? `↗ +${stats.revenueChange.toFixed(1)}% vs last month` : `↘ ${stats.revenueChange.toFixed(1)}% vs last month`} 
-                        icon={<SvgRs className='w-6 h-6 text-[#0B76FF] '/>}
-                    />
-                </div>
-                <div className="w-auto">
-                    <Card 
-                        label="Invoices Generated" 
-                        value={stats.invoicesGenerated.toLocaleString('en-IN')} 
-                        disc="Total count" 
-                        icon={<SvgDoc className='w-6 h-6 text-[#0B76FF] '/>}
-                    />
-                </div>
-                <div className="w-auto">
-                    <Card 
-                        label="Total Prints" 
-                        value={stats.totalPrints.toLocaleString('en-IN')} 
-                        disc="This month" 
-                        icon={<SvgPaper className='w-6 h-6 text-[#0B76FF] '/>}
-                    />
-                </div>
-                <div className="w-auto row-start-2 row-end-3 col-start-1 col-end-3">
-                    <Card 
-                        label="Total Income" 
-                        value={`₹${Math.round(stats.avgOrderValue).toLocaleString('en-IN')}`} 
-                        disc="" 
-                        icon={<SvgAvgOrder className='w-6 h-6 text-[#0B76FF] '/>}
-                    />
-                </div>
-                <div className="w-auto row-start-2 row-end-3 col-start-2 col-end-4">
-                    <Card 
-                        label="Total Pending" 
-                        value={`₹${Math.round(stats.avgOrderValue).toLocaleString('en-IN')}`} 
-                        disc="" 
-                        icon={<SvgAvgOrder className='w-6 h-6 text-[#0B76FF] '/>}
-                    />
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card 
+                    label="Total Revenue" 
+                    value={`₹${(stats.monthlyRevenue + stats.pendingPayments).toLocaleString('en-IN')}`} 
+                    disc={stats.revenueChange >= 0 ? `↗ +${stats.revenueChange.toFixed(1)}% vs last month` : `↘ ${stats.revenueChange.toFixed(1)}% vs last month`} 
+                    icon={<SvgRs className='w-6 h-6 text-[#0B76FF] '/>}
+                />
+                <Card 
+                    label="Paid Amount" 
+                    value={`₹${stats.monthlyRevenue.toLocaleString('en-IN')}`} 
+                    disc="Collected revenue" 
+                    icon={<SvgRs className='w-6 h-6 text-green-600 '/>}
+                />
+                <Card 
+                    label="Total Pending" 
+                    value={`₹${stats.pendingPayments.toLocaleString('en-IN')}`} 
+                    disc="Unpaid balance" 
+                    icon={<SvgAvgOrder className='w-6 h-6 text-orange-500 '/>}
+                />
+                <Card 
+                    label="Invoices Generated" 
+                    value={stats.invoicesGenerated.toLocaleString('en-IN')} 
+                    disc="Total count" 
+                    icon={<SvgDoc className='w-6 h-6 text-[#0B76FF] '/>}
+                />
+                <Card 
+                    label="Total Prints" 
+                    value={stats.totalPrints.toLocaleString('en-IN')} 
+                    disc="Monthly volume" 
+                    icon={<SvgPaper className='w-6 h-6 text-[#0B76FF] '/>}
+                />
+                <Card 
+                    label="Avg. Order Value" 
+                    value={`₹${Math.round(stats.avgOrderValue).toLocaleString('en-IN')}`} 
+                    disc="Average per bill" 
+                    icon={<SvgAvgOrder className='w-6 h-6 text-[#0B76FF] '/>}
+                />
             </div>
 
             <div className="grid grid-cols-3 gap-6">

@@ -4,7 +4,7 @@ import Input from '../base/Input'
 import Dropdown from '../base/Dropdown'
 
 const ProductInfo = () => {
-    const[,setProduct] = useState("");
+    const[product,setProduct] = useState("");
     const productList = [
         {label:'A4',value:'a4'}
     ]
@@ -19,7 +19,7 @@ const ProductInfo = () => {
         <form action="" className="w-full">
             <Input label='Product Name' placeholder='e.g. Color Print A4 High Glossy' className='max-w-200 text-black' />
             <div className="w-full flex items-end gap-2">
-                <Dropdown name='Category' option={productList} onChange={(value)=>{setProduct(value)}}/>
+                <Dropdown name='Category' value={product} option={productList} onChange={(value)=>{setProduct(value)}}/>
                 <Input label='Product Code / SKU (Optional)' placeholder='e.g. PRT-001' className='text-black'/>
             </div>
             <Input label='Description' placeholder='Enter product details, specifications...' className='text-black'/>

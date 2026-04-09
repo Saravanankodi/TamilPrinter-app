@@ -89,7 +89,6 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
         // }, [customerData, existingBill, isEditMode]);
 
         const saveBill = async () => {
-            console.log({ isEditMode, billId });
             if (!billData || billData.length === 0) {
                 await showAlert({
                 icon: 'info',
@@ -100,6 +99,15 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                 return;
             }
 
+            if (customerData.name == '-' && customerData.phone == '-'){
+                await showAlert({
+                icon: 'warning',
+                title: 'Invaild Customer Details',
+                text: 'Please Enter customer details',
+                confirmText: 'OK',
+                });
+                return;
+            }
             if (!value) {
                 await showAlert({
                 icon: 'warning',

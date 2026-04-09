@@ -14,7 +14,19 @@ const RecentInvoice = () => {
         const fetchBills = async () => {
           if (window.api?.getBills) {
             const data = await window.api.getBills();
-            setBills(data || []);
+            
+            // Filter today and yesterday
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+            
+            const filteredData = (data || []).filter((bill: any) => {
+                const billDate = new Date(bill.created_at);
+                return billDate >= yesterday;
+            });
+            
+            setBills(filteredData);
           }
         };
         fetchBills();

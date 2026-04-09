@@ -73,7 +73,7 @@ const Reports = () => {
                     <select 
                         value={month} 
                         onChange={(e) => setMonth(Number(e.target.value))}
-                        className="bg-white border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="bg-white border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                     >
                         {months.map((m, i) => (
                             <option key={m} value={i + 1}>{m}</option>
@@ -82,7 +82,7 @@ const Reports = () => {
                     <select 
                         value={year} 
                         onChange={(e) => setYear(Number(e.target.value))}
-                        className="bg-white border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="bg-white border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                     >
                         {[2023, 2024, 2025, 2026].map(y => (
                             <option key={y} value={y}>{y}</option>

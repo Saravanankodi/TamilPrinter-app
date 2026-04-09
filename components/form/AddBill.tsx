@@ -15,7 +15,7 @@ const AddBill = ({data,setData}:billData) => {
         quantity: 1,
         paper: 0,
         page: 0,
-        rate: 0,
+        rate: 1.5,
         print: "",
         amount:"",
         note: ""
@@ -70,7 +70,7 @@ const AddBill = ({data,setData}:billData) => {
           paper: 0,
           page: 0,
           amount:"",
-          rate: 0,
+          rate: 1.5,
           print: "",
           note: ""
         });

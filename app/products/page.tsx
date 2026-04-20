@@ -80,6 +80,7 @@ export default function Products() {
                   <th className="p-3">Category</th>
                   <th className="p-3">Pricing Model</th>
                   <th className="p-3">Rate / Price</th>
+                  <th className="p-3">Quantity</th>
                   <th className="p-3">Status</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
@@ -98,6 +99,15 @@ export default function Products() {
                     </td>
                     <td className="p-3 text-gray-600">{product.pricing_model}</td>
                     <td className="p-3 font-medium">₹{product.cost_price?.toFixed(2)}</td>
+                    <td className="p-3">
+                      {product.track_stock ? (
+                        <span className={`font-bold ${product.current_stock < 10 ? 'text-red-600' : 'text-blue-600'}`}>
+                          {product.current_stock}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 italic">No track</span>
+                      )}
+                    </td>
                     <td className="p-3">
                       <span className={`px-2 py-1 rounded text-xs ${product.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                         {product.status || 'Active'}

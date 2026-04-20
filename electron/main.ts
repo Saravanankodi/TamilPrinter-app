@@ -71,18 +71,18 @@ ipcMain.handle("save-bill", (_, payload) => {
     const prefix = `INV-${year}${month}`;
 
     const lastBill = db
-        .prepare(`SELECT bill_number FROM bills WHERE bill_number LIKE ? ORDER BY id DESC LIMIT 1`)
-        .get(`${prefix}%`) as { bill_number: string } | undefined;
+      .prepare(`SELECT bill_number FROM bills WHERE bill_number LIKE ? ORDER BY id DESC LIMIT 1`)
+      .get(`${prefix}%`) as { bill_number: string } | undefined;
 
-      let nextNumber = 1;
+    let nextNumber = 1;
 
-      if (lastBill) {
-        const lastNum = Number(lastBill.bill_number.slice(-4));
-        nextNumber = lastNum + 1;
-      }
+    if (lastBill) {
+      const lastNum = Number(lastBill.bill_number.slice(-4));
+      nextNumber = lastNum + 1;
+    }
 
-      const billNumber = `${prefix}${String(nextNumber).padStart(4, "0")}`;
-      
+    const billNumber = `${prefix}${String(nextNumber).padStart(4, "0")}`;
+
     const billResult = db.prepare(`
       INSERT INTO bills (customer_id, bill_number, total, created_at)
       VALUES (?, ?, ?, ?)
@@ -135,6 +135,45 @@ ipcMain.handle("save-bill", (_, payload) => {
       VALUES (?, 'CREATED', ?, ?)
     `).run(billId, snapshot, new Date().toISOString());
 
+    // 7️⃣ Stock Reduction Logic
+    try {
+      const totalPapers = items.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0) * (Number(item.paper) || 0), 0);
+
+      if (totalPapers > 0) {
+        // Update Paper Counter
+        const paperCounterRow = db.prepare("SELECT value FROM settings WHERE key = 'paper_counter'").get() as { value: string };
+        let paperCount = parseInt(paperCounterRow.value) + totalPapers;
+        const boxesToReduce = Math.floor(paperCount / 5000);
+        paperCount = paperCount % 5000;
+        db.prepare("UPDATE settings SET value = ? WHERE key = 'paper_counter'").run(paperCount.toString());
+
+        if (boxesToReduce > 0) {
+          // Find paper box product - looking for name containing 'Box' and track_stock = 1
+          const boxProduct = db.prepare("SELECT id FROM products WHERE (name LIKE '%Box%' OR name LIKE '%box%') AND track_stock = 1 LIMIT 1").get() as { id: number } | undefined;
+          if (boxProduct) {
+            db.prepare("UPDATE products SET current_stock = current_stock - ? WHERE id = ?").run(boxesToReduce, boxProduct.id);
+          }
+        }
+
+        // Update Ink Counter
+        const inkCounterRow = db.prepare("SELECT value FROM settings WHERE key = 'ink_counter'").get() as { value: string };
+        let inkCount = parseInt(inkCounterRow.value) + totalPapers;
+        const inkToReduce = Math.floor(inkCount / 2500);
+        inkCount = inkCount % 2500;
+        db.prepare("UPDATE settings SET value = ? WHERE key = 'ink_counter'").run(inkCount.toString());
+
+        if (inkToReduce > 0) {
+          // Find ink bottle product - looking for name containing 'Ink' and track_stock = 1
+          const inkProduct = db.prepare("SELECT id FROM products WHERE (name LIKE '%Ink%' OR name LIKE '%ink%') AND track_stock = 1 LIMIT 1").get() as { id: number } | undefined;
+          if (inkProduct) {
+            db.prepare("UPDATE products SET current_stock = current_stock - ? WHERE id = ?").run(inkToReduce, inkProduct.id);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Stock reduction error:", err);
+    }
+
     return { success: true, billNumber };
   });
 
@@ -180,8 +219,8 @@ ipcMain.handle("get-bill-details", (_, billId: number) => {
     .prepare(`SELECT * FROM customers WHERE id = ?`)
     .get(bill.customer_id);
   const payment = db
-  .prepare(`SELECT method FROM payments WHERE bill_id = ?`)
-  .get(billId);
+    .prepare(`SELECT method FROM payments WHERE bill_id = ?`)
+    .get(billId);
   const paymentHistory = db
     .prepare(`SELECT old_payment_method, new_payment_method, updated_at FROM payment_history WHERE bill_id = ? ORDER BY updated_at DESC`)
     .all(billId);
@@ -220,9 +259,9 @@ ipcMain.handle("get-bills", (_, filters?: { paymentMethod?: string, status?: str
   }
 
   query += ` ORDER BY b.created_at DESC`;
-  
+
   const bills = db.prepare(query).all(...params) as BillRow[];
-  
+
   // Computer status for UI
   return bills.map(bill => {
     let status = "Pending";
@@ -364,7 +403,7 @@ ipcMain.handle("get-report-stats", (_, { month, year }: { month: number; year: n
   let pending = 0;
 
   for (const b of bills) {
-    const isPaid = ["cash","card","upi"].includes((b.method || "").toLowerCase());
+    const isPaid = ["cash", "card", "upi"].includes((b.method || "").toLowerCase());
     if (isPaid) monthlyRevenue += b.total;
     else pending += b.total;
   }
@@ -394,7 +433,7 @@ ipcMain.handle("get-report-stats", (_, { month, year }: { month: number; year: n
 
   let prevRevenue = 0;
   for (const b of prevBills) {
-    const isPaid = ["cash","card","upi"].includes((b.method || "").toLowerCase());
+    const isPaid = ["cash", "card", "upi"].includes((b.method || "").toLowerCase());
     if (isPaid) prevRevenue += b.total;
   }
 
@@ -411,7 +450,7 @@ ipcMain.handle("get-report-stats", (_, { month, year }: { month: number; year: n
       LEFT JOIN payments p ON p.bill_id = b.id
       WHERE b.created_at >= ? AND b.created_at <= ?
     `).all(dayStart, dayEnd) as Array<{ total: number; method: string | null }>;
-    const rev = dayBills.filter(b => ["cash","card","upi"].includes((b.method||"").toLowerCase())).reduce((s,b) => s+b.total, 0);
+    const rev = dayBills.filter(b => ["cash", "card", "upi"].includes((b.method || "").toLowerCase())).reduce((s, b) => s + b.total, 0);
     dailyRevenue.push({ day: String(d), revenue: rev });
   }
 
@@ -457,7 +496,7 @@ ipcMain.handle("get-report-stats", (_, { month, year }: { month: number; year: n
     serviceBreakdown,
     recentTransactions: recentTx.map(t => ({
       ...t,
-      status: ["cash","card","upi"].includes((t.method||"").toLowerCase()) ? "Paid" : "Pending"
+      status: ["cash", "card", "upi"].includes((t.method || "").toLowerCase()) ? "Paid" : "Pending"
     }))
   };
 });
@@ -564,6 +603,7 @@ function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: path.join(__dirname, "icon.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -644,8 +684,8 @@ function createWindow() {
   }
 }
 app.whenReady().then(async () => {
-    createWindow();
-  });
+  createWindow();
+});
 app.on("will-quit", () => {
   if (server) server.kill();
 });

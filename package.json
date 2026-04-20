@@ -1,6 +1,6 @@
 {
   "name": "printout",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "main": "dist/electron/main.js",
   "scripts": {
@@ -26,7 +26,8 @@
       "package.json"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "public/icon.ico"
     }
   },
   "dependencies": {

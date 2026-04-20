@@ -172,31 +172,33 @@ export default function Home() {
                         </div>
                     </div>
 
-                    {/* Stock Alerts */}
+                    {/* Inventory Overview */}
                     <div className="col-span-4 row-span-3 w-full h-full bg-white rounded-xl shadow-sm border border-[#00000014] overflow-hidden flex flex-col flex-1 ">
-                        <header className="w-full h-auto px-2 py-3 border-b border-[#00000014]">
+                        <header className="w-full h-auto px-2 py-3 border-b border-[#00000014] flex justify-between items-center">
                             <h3 className="font-bold text-lg">
-                                Stock Alerts
+                                Inventory Overview
                             </h3>
                             {lowStockItems.length > 0 && (
                                 <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest">{lowStockItems.length} Low</span>
                             )}
                         </header>
                         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                            {lowStockItems.length === 0 ? (
+                            {products.filter(p => p.track_stock === 1).length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center text-gray-400 text-center p-8 gap-3 opacity-60">
-                                    <div className="w-12 h-12 rounded-full border-2 border-gray-200 flex items-center justify-center">✅</div>
-                                    <p className="text-sm font-medium">All items are sufficiently stocked</p>
+                                    <div className="w-12 h-12 rounded-full border-2 border-gray-200 flex items-center justify-center">📦</div>
+                                    <p className="text-sm font-medium">No items tracked</p>
                                 </div>
                             ) : (
-                                lowStockItems.map(item => (
-                                    <div key={item.id} className="flex items-center justify-between p-3 border border-red-50 rounded-lg bg-red-50/30">
+                                products.filter(p => p.track_stock === 1).map(item => (
+                                    <div key={item.id} className={`flex items-center justify-between p-3 border rounded-lg ${item.current_stock < 10 ? 'border-red-50 bg-red-50/30' : 'border-gray-50 bg-gray-50/30'}`}>
                                         <div className="flex flex-col">
                                             <span className="text-xs font-bold text-gray-800 line-clamp-1">{item.name}</span>
                                             <span className="text-[10px] text-gray-500 uppercase">{item.category}</span>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-xs font-bold text-red-600 p-1 rounded bg-white border border-red-100">{item.current_stock} left</span>
+                                            <span className={`text-xs font-bold p-1 rounded bg-white border ${item.current_stock < 10 ? 'text-red-600 border-red-100' : 'text-blue-600 border-blue-100'}`}>
+                                                {item.current_stock} {item.current_stock <= 1 ? 'unit' : 'units'} left
+                                            </span>
                                         </div>
                                     </div>
                                 ))

@@ -98,6 +98,15 @@ CREATE TABLE IF NOT EXISTS payment_history (
   FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+
+-- Initialize counters if not exists
+INSERT OR IGNORE INTO settings (key, value) VALUES ('paper_counter', '0');
+INSERT OR IGNORE INTO settings (key, value) VALUES ('ink_counter', '0');
+
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_bills_customer_id ON bills(customer_id);

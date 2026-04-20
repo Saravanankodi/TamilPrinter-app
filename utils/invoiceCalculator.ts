@@ -2,7 +2,7 @@ import { BillData, CalculationResult } from "@/types";
 
 export function calculateInvoice(items: BillData[]): CalculationResult {
   const subtotal = items.reduce((acc, item) => {
-    if (item.amount !== "") {
+    if (item.amount && Number(item.amount) > 0) {
       return acc + Number(item.amount);
     }
     // Multiply by paper if needed, or fallback to 1 if paper is 0 or undefined for things that don't use paper

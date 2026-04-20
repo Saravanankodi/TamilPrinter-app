@@ -156,6 +156,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
         };
 
         const BillTotal = calculateInvoice(billData)
+        // console.log(BillTotal)
   return (
     <>
     <section ref={invoiceRef} className="w-full h-full relative flex flex-col rounded-lg bg-white p-2 ">

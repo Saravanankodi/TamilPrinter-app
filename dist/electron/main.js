@@ -90,6 +90,41 @@ electron_2.ipcMain.handle("save-bill", (_, payload) => {
       INSERT INTO bill_history (bill_id, action, snapshot, created_at)
       VALUES (?, 'CREATED', ?, ?)
     `).run(billId, snapshot, new Date().toISOString());
+        // 7️⃣ Stock Reduction Logic
+        try {
+            const totalPapers = items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.paper) || 0), 0);
+            if (totalPapers > 0) {
+                // Update Paper Counter
+                const paperCounterRow = database_1.db.prepare("SELECT value FROM settings WHERE key = 'paper_counter'").get();
+                let paperCount = parseInt(paperCounterRow.value) + totalPapers;
+                const boxesToReduce = Math.floor(paperCount / 5000);
+                paperCount = paperCount % 5000;
+                database_1.db.prepare("UPDATE settings SET value = ? WHERE key = 'paper_counter'").run(paperCount.toString());
+                if (boxesToReduce > 0) {
+                    // Find paper box product - looking for name containing 'Box' and track_stock = 1
+                    const boxProduct = database_1.db.prepare("SELECT id FROM products WHERE (name LIKE '%Box%' OR name LIKE '%box%') AND track_stock = 1 LIMIT 1").get();
+                    if (boxProduct) {
+                        database_1.db.prepare("UPDATE products SET current_stock = current_stock - ? WHERE id = ?").run(boxesToReduce, boxProduct.id);
+                    }
+                }
+                // Update Ink Counter
+                const inkCounterRow = database_1.db.prepare("SELECT value FROM settings WHERE key = 'ink_counter'").get();
+                let inkCount = parseInt(inkCounterRow.value) + totalPapers;
+                const inkToReduce = Math.floor(inkCount / 2500);
+                inkCount = inkCount % 2500;
+                database_1.db.prepare("UPDATE settings SET value = ? WHERE key = 'ink_counter'").run(inkCount.toString());
+                if (inkToReduce > 0) {
+                    // Find ink bottle product - looking for name containing 'Ink' and track_stock = 1
+                    const inkProduct = database_1.db.prepare("SELECT id FROM products WHERE (name LIKE '%Ink%' OR name LIKE '%ink%') AND track_stock = 1 LIMIT 1").get();
+                    if (inkProduct) {
+                        database_1.db.prepare("UPDATE products SET current_stock = current_stock - ? WHERE id = ?").run(inkToReduce, inkProduct.id);
+                    }
+                }
+            }
+        }
+        catch (err) {
+            console.error("Stock reduction error:", err);
+        }
         return { success: true, billNumber };
     });
     return transaction.immediate();
@@ -450,6 +485,7 @@ function createWindow() {
     const mainWindow = new electron_1.BrowserWindow({
         width: 1200,
         height: 800,
+        icon: path_1.default.join(__dirname, "icon.png"),
         webPreferences: {
             preload: path_1.default.join(__dirname, "preload.js"),
             contextIsolation: true,

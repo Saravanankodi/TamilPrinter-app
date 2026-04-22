@@ -14,6 +14,11 @@ contextBridge.exposeInMainWorld("api", {
   deleteBillItem: (itemId: number) => ipcRenderer.invoke("delete-bill-item", itemId),
   updateBillPayment: (data: { billId: number; method: string }) => ipcRenderer.invoke("update-bill-payment", data),
 
+  // Split Payments
+  addSplitPayment: (data: { billId: number; method: string; amount: number; note?: string }) => ipcRenderer.invoke("add-split-payment", data),
+  getSplitPayments: (billId: number) => ipcRenderer.invoke("get-split-payments", billId),
+  deleteSplitPayment: (data: { billId: number; paymentId: number }) => ipcRenderer.invoke("delete-split-payment", data),
+
   // Customers
   getCustomers: () => ipcRenderer.invoke("get-customers"),
   addCustomer: (customer: any) => ipcRenderer.invoke("add-customer", customer),

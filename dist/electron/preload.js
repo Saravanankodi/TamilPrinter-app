@@ -13,6 +13,10 @@ electron_1.contextBridge.exposeInMainWorld("api", {
     updateBillItem: (item) => electron_1.ipcRenderer.invoke("update-bill-item", item),
     deleteBillItem: (itemId) => electron_1.ipcRenderer.invoke("delete-bill-item", itemId),
     updateBillPayment: (data) => electron_1.ipcRenderer.invoke("update-bill-payment", data),
+    // Split Payments
+    addSplitPayment: (data) => electron_1.ipcRenderer.invoke("add-split-payment", data),
+    getSplitPayments: (billId) => electron_1.ipcRenderer.invoke("get-split-payments", billId),
+    deleteSplitPayment: (data) => electron_1.ipcRenderer.invoke("delete-split-payment", data),
     // Customers
     getCustomers: () => electron_1.ipcRenderer.invoke("get-customers"),
     addCustomer: (customer) => electron_1.ipcRenderer.invoke("add-customer", customer),

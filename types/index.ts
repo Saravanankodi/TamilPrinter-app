@@ -129,7 +129,7 @@ export type Bill = {
 export type Invoice = {
   id: string;
   total: number;
-  status: 'Paid' | 'Pending';
+  status: 'Paid' | 'Partial' | 'Pending';
   created_at: string;
 };
 export interface AlertModalProps {

@@ -10,6 +10,7 @@ export function calculateDashboardStats(invoices: Invoice[]) {
     date.getMonth() === today.getMonth() &&
     date.getFullYear() === today.getFullYear();
 
+  let todaysIncome = 0;
   let todaysRevenue = 0;
   let yesterdayRevenue = 0;
   let monthlySales = 0;
@@ -35,14 +36,23 @@ export function calculateDashboardStats(invoices: Invoice[]) {
       yesterdayRevenue += inv.total;
     }
 
+    // Todays Income
+    if (isToday(date)) {
+      todaysIncome += inv.total
+    }
+
     // Monthly sales
     if (isThisMonth(date) && inv.status === 'Paid') {
       monthlySales += inv.total;
     }
 
-    // Pending
+    // Pending (include both Pending and Partial)
     if (inv.status === 'Pending') {
       pendingPayments += inv.total;
+    } else if (inv.status === 'Partial') {
+      // For partial, add the remaining unpaid amount
+      const paidAmount = (inv as any).paid_amount || 0;
+      pendingPayments += Math.max(0, inv.total - paidAmount);
     }
 
     // Count invoices
@@ -57,6 +67,7 @@ export function calculateDashboardStats(invoices: Invoice[]) {
       : ((todaysRevenue - yesterdayRevenue) / yesterdayRevenue) * 100;
 
   return {
+    todaysIncome,
     todaysRevenue,
     invoicesGenerated,
     monthlySales,

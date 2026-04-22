@@ -18,15 +18,16 @@ const AllInvoice = () => {
     const options = [
         { label: "All", value: "" },
         { label: "Paid", value: "Paid" },
+        { label: "Partial", value: "Partial" },
         { label: "Pending", value: "Pending" },
-      ];
+    ];
     const paymentMode = [
         { label: "All", value: "" },
         { label: "UPI", value: "UPI" },
         { label: "Cash", value: "Cash" },
         { label: "Card", value: "Card" },
         { label: "Pending", value: "Pending" },
-      ];
+    ];
     const fetchBills = async () => {
         if (window.api?.getBills) {
             const data = await window.api.getBills();
@@ -68,7 +69,7 @@ const AllInvoice = () => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", `invoices_${new Date().toISOString().slice(0,10)}.csv`);
+        link.setAttribute("download", `invoices_${new Date().toISOString().slice(0, 10)}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -84,9 +85,9 @@ const AllInvoice = () => {
                     </h1>
                 </div>
                 <div className="flex gap-3">
-                    <Button 
-                        icon={<DownloadIcon />} 
-                        className='text-white' 
+                    <Button
+                        icon={<DownloadIcon />}
+                        className='text-white'
                         onClick={exportToCSV}
                     >
                         Export Data
@@ -98,14 +99,14 @@ const AllInvoice = () => {
                 <p className="text-sm text-gray-500">View and manage all your past billing transactions.</p>
             </aside>
             <aside className="w-full h-auto flex items-center gap-5 flex-wrap">
-                <Input 
-                    placeholder="Search invoices..." 
+                <Input
+                    placeholder="Search invoices..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="max-w-80"
                 />
-                <Dropdown name='' option={options} value={statusFilter} onChange={(value) => setStatusFilter(value)}/>
-                <Dropdown name='' option={paymentMode} value={paymentFilter} onChange={(value) => setPaymentFilter(value)}/>
+                <Dropdown name='' option={options} value={statusFilter} onChange={(value) => setStatusFilter(value)} />
+                <Dropdown name='' option={paymentMode} value={paymentFilter} onChange={(value) => setPaymentFilter(value)} />
             </aside>
             <main className="w-full bg-white rounded-lg shadow-sm border border-[#00000014] overflow-scroll no-scrollbar">
                 <table className="min-w-full text-left overflow-auto">
@@ -122,8 +123,8 @@ const AllInvoice = () => {
                     </thead>
                     <tbody>
                         {filteredBills.map((bill) => (
-                            <tr 
-                                key={bill.id} 
+                            <tr
+                                key={bill.id}
                                 className="border-b border-[#F1F5F9] hover:bg-gray-50 transition-colors cursor-pointer group"
                                 onClick={() => router.push(`/invoice/${bill.id}`)}
                             >
@@ -133,14 +134,19 @@ const AllInvoice = () => {
                                 <td className="px-4 py-3 text-sm font-semibold text-gray-900">₹ {bill.total.toLocaleString('en-IN')}</td>
                                 <td className="px-4 py-3 text-sm text-gray-600">{bill.payment_method || "N/A"}</td>
                                 <td className="px-4 py-3 text-sm">
-                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${bill.status === "Paid" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
-                                        {bill.status || "Pending"}
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${bill.status === "Paid"
+                                            ? "bg-green-100 text-green-700"
+                                            : bill.status === "Partial"
+                                                ? "bg-amber-100 text-amber-700"
+                                                : "bg-red-100 text-red-600"
+                                        }`}>
+                                        {bill.status === "Paid" ? "Paid" : bill.status === "Partial" ? "Partial" : "Pending"}
                                     </span>
                                 </td>
                                 <td className="px-4 py-3 text-sm text-right">
                                     <div className="flex justify-end gap-2">
-                                        {bill.status !== "Paid" && (
-                                            <button 
+                                        {(bill.status === "Pending" || bill.status === "Partial") && (
+                                            <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     router.push(`/invoice/${bill.id}/edit`); // Assuming edit page exists or will be added
@@ -148,10 +154,10 @@ const AllInvoice = () => {
                                                 className="p-1 hover:bg-blue-50 text-blue-600 rounded"
                                                 title="Edit"
                                             >
-                                                <SvgEdit className='w-5 h-5'/>
+                                                <SvgEdit className='w-5 h-5' />
                                             </button>
                                         )}
-                                        <button 
+                                        <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 router.push(`/invoice/${bill.id}`); // This shows printable view
@@ -159,7 +165,7 @@ const AllInvoice = () => {
                                             className="p-1 hover:bg-gray-100 text-gray-600 rounded"
                                             title="Download PDF"
                                         >
-                                            <Download className='w-5 h-5'/>
+                                            <Download className='w-5 h-5' />
                                         </button>
                                     </div>
                                 </td>

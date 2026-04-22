@@ -98,6 +98,16 @@ CREATE TABLE IF NOT EXISTS payment_history (
   FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS split_payments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bill_id INTEGER NOT NULL,
+  method TEXT NOT NULL,
+  amount REAL NOT NULL,
+  note TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT
@@ -112,6 +122,7 @@ INSERT OR IGNORE INTO settings (key, value) VALUES ('ink_counter', '0');
 CREATE INDEX IF NOT EXISTS idx_bills_customer_id ON bills(customer_id);
 CREATE INDEX IF NOT EXISTS idx_payments_bill_id ON payments(bill_id);
 CREATE INDEX IF NOT EXISTS idx_bills_created_at ON bills(created_at);
+CREATE INDEX IF NOT EXISTS idx_split_payments_bill_id ON split_payments(bill_id);
 `);
 // Safe migration for updated_at column
 try {
@@ -128,4 +139,36 @@ try {
 }
 catch (error) {
     console.error("[Migration Error] Failed to alter table:", error);
+}
+// Safe migration for paid_amount and status columns on bills
+try {
+    const tableInfo = exports.db.prepare("PRAGMA table_info(bills)").all();
+    const hasPaidAmount = tableInfo.some((col) => col.name === 'paid_amount');
+    if (!hasPaidAmount) {
+        console.log("[Migration] Adding paid_amount column to bills table...");
+        exports.db.exec("ALTER TABLE bills ADD COLUMN paid_amount REAL DEFAULT 0;");
+        console.log("[Migration] paid_amount column added successfully.");
+    }
+    const hasStatus = tableInfo.some((col) => col.name === 'status');
+    if (!hasStatus) {
+        console.log("[Migration] Adding status column to bills table...");
+        exports.db.exec("ALTER TABLE bills ADD COLUMN status TEXT DEFAULT 'Pending';");
+        console.log("[Migration] status column added successfully.");
+        // Backfill existing bills: derive status from payments table
+        const bills = exports.db.prepare(`
+      SELECT b.id, b.total, p.method, p.amount as paid
+      FROM bills b
+      LEFT JOIN payments p ON p.bill_id = b.id
+    `).all();
+        for (const bill of bills) {
+            const isPaidMethod = ['cash', 'card', 'upi'].includes((bill.method || '').toLowerCase());
+            const paidAmount = isPaidMethod ? bill.total : 0;
+            const status = isPaidMethod ? 'Paid' : 'Pending';
+            exports.db.prepare("UPDATE bills SET paid_amount = ?, status = ? WHERE id = ?").run(paidAmount, status, bill.id);
+        }
+        console.log("[Migration] Backfilled status for existing bills.");
+    }
+}
+catch (error) {
+    console.error("[Migration Error] Failed to add paid_amount/status:", error);
 }

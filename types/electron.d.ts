@@ -15,6 +15,11 @@ declare global {
       getCustomers: () => Promise<any[]>;
       addCustomer: (customer: any) => Promise<{ id: number }>;
 
+      // Split Payments
+      addSplitPayment: (data: { billId: number; method: string; amount: number; note?: string }) => Promise<any>;
+      getSplitPayments: (billId: number) => Promise<any[]>;
+      deleteSplitPayment: (data: { billId: number; paymentId: number }) => Promise<any>;
+
       // Products
       getProducts: () => Promise<any[]>;
       getProduct: (id: number) => Promise<any>;

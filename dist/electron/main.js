@@ -57,10 +57,14 @@ electron_2.ipcMain.handle("save-bill", (_, payload) => {
             nextNumber = lastNum + 1;
         }
         const billNumber = `${prefix}${String(nextNumber).padStart(4, "0")}`;
+        // Determine initial status based on payment method
+        const isPaidMethod = ['cash', 'card', 'upi'].includes((paymentMethod || '').toLowerCase());
+        const initialStatus = isPaidMethod ? 'Paid' : 'Pending';
+        const initialPaidAmount = isPaidMethod ? total : 0;
         const billResult = database_1.db.prepare(`
-      INSERT INTO bills (customer_id, bill_number, total, created_at)
-      VALUES (?, ?, ?, ?)
-    `).run(customerId, billNumber, total, new Date().toISOString());
+      INSERT INTO bills (customer_id, bill_number, total, created_at, paid_amount, status)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(customerId, billNumber, total, new Date().toISOString(), initialPaidAmount, initialStatus);
         const billId = Number(billResult.lastInsertRowid);
         // Set updated_at safely (migration may have just added this column)
         try {
@@ -164,7 +168,30 @@ electron_2.ipcMain.handle("get-bill-details", (_, billId) => {
     const paymentHistory = database_1.db
         .prepare(`SELECT old_payment_method, new_payment_method, updated_at FROM payment_history WHERE bill_id = ? ORDER BY updated_at DESC`)
         .all(billId);
-    return { bill, items, customer, paymentMethod: payment || "Pending", paymentHistory };
+    // Fetch split payments
+    const splitPayments = database_1.db
+        .prepare(`SELECT * FROM split_payments WHERE bill_id = ? ORDER BY created_at ASC`)
+        .all(billId);
+    const totalPaid = splitPayments.reduce((sum, sp) => sum + (sp.amount || 0), 0);
+    const remainingBalance = Math.max(0, bill.total - totalPaid);
+    // Compute current status
+    let computedStatus = 'Pending';
+    if (totalPaid >= bill.total) {
+        computedStatus = 'Paid';
+    }
+    else if (totalPaid > 0) {
+        computedStatus = 'Partial';
+    }
+    return {
+        bill: { ...bill, paid_amount: totalPaid, status: computedStatus },
+        items,
+        customer,
+        paymentMethod: payment || "Pending",
+        paymentHistory,
+        splitPayments,
+        totalPaid,
+        remainingBalance
+    };
 });
 electron_2.ipcMain.handle("get-bills", (_, filters) => {
     let query = `
@@ -175,6 +202,8 @@ electron_2.ipcMain.handle("get-bills", (_, filters) => {
       c.name AS customer_name,
       b.created_at,
       b.total,
+      b.paid_amount,
+      b.status,
       p.method AS payment_method
     FROM bills b
     LEFT JOIN customers c ON c.id = b.customer_id
@@ -188,23 +217,34 @@ electron_2.ipcMain.handle("get-bills", (_, filters) => {
     }
     if (filters?.status && filters.status !== "") {
         const s = filters.status.toLowerCase();
-        if (s === 'paid') {
-            query += ` AND LOWER(p.method) IN ('cash', 'card', 'upi')`;
-        }
-        else if (s === 'pending') {
-            query += ` AND (p.method IS NULL OR LOWER(p.method) NOT IN ('cash', 'card', 'upi'))`;
-        }
+        query += ` AND LOWER(COALESCE(b.status, 'pending')) = ?`;
+        params.push(s);
     }
     query += ` ORDER BY b.created_at DESC`;
     const bills = database_1.db.prepare(query).all(...params);
-    // Computer status for UI
+    // Recompute status from split_payments for accuracy
     return bills.map(bill => {
-        let status = "Pending";
-        const m = bill.payment_method?.toLowerCase();
-        if (m === "cash" || m === "card" || m === "upi") {
-            status = "Paid";
+        const splitPayments = database_1.db.prepare(`SELECT SUM(amount) as total_paid FROM split_payments WHERE bill_id = ?`).get(bill.id);
+        const totalPaid = splitPayments?.total_paid || bill.paid_amount || 0;
+        const remaining = Math.max(0, bill.total - totalPaid);
+        let status = bill.status || 'Pending';
+        if (totalPaid >= bill.total && bill.total > 0) {
+            status = 'Paid';
         }
-        return { ...bill, status };
+        else if (totalPaid > 0) {
+            status = 'Partial';
+        }
+        else {
+            // Fallback: check legacy payment method
+            const m = bill.payment_method?.toLowerCase();
+            if (m === 'cash' || m === 'card' || m === 'upi') {
+                status = 'Paid';
+            }
+            else {
+                status = 'Pending';
+            }
+        }
+        return { ...bill, status, paid_amount: totalPaid, remaining_balance: remaining };
     });
 });
 // ── Bill Update API ────────────────────────────────────────────────────────
@@ -229,7 +269,95 @@ electron_2.ipcMain.handle("update-bill", (_, payload) => {
         VALUES (?, ?, ?, ?)
       `).run(billId, oldMethod, paymentMethod, new Date().toISOString());
         }
+        // Recalculate paid_amount and status from split_payments
+        const bill = database_1.db.prepare(`SELECT total FROM bills WHERE id = ?`).get(billId);
+        if (bill) {
+            const splitResult = database_1.db.prepare(`SELECT SUM(amount) as total_paid FROM split_payments WHERE bill_id = ?`).get(billId);
+            const totalPaid = splitResult?.total_paid || 0;
+            let status = 'Pending';
+            if (totalPaid >= bill.total) {
+                status = 'Paid';
+            }
+            else if (totalPaid > 0) {
+                status = 'Partial';
+            }
+            else {
+                // If no split payments, derive from payment method
+                const isPaid = ['cash', 'card', 'upi'].includes((paymentMethod || '').toLowerCase());
+                status = isPaid ? 'Paid' : 'Pending';
+                // If method is paid and no split payments, set paid_amount = total
+                if (isPaid) {
+                    database_1.db.prepare(`UPDATE bills SET paid_amount = ?, status = ? WHERE id = ?`).run(bill.total, 'Paid', billId);
+                    return { success: true, billId };
+                }
+            }
+            database_1.db.prepare(`UPDATE bills SET paid_amount = ?, status = ? WHERE id = ?`).run(totalPaid, status, billId);
+        }
         return { success: true, billId };
+    });
+    return transaction.immediate();
+});
+// ── Split Payments ─────────────────────────────────────────────────────────
+electron_2.ipcMain.handle("add-split-payment", (_, payload) => {
+    const { billId, method, amount, note } = payload;
+    if (!billId || !method || !amount || amount <= 0) {
+        throw new Error("Invalid split payment data");
+    }
+    const transaction = database_1.db.transaction(() => {
+        // Insert the split payment
+        const result = database_1.db.prepare(`
+      INSERT INTO split_payments (bill_id, method, amount, note, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(billId, method, amount, note || null, new Date().toISOString());
+        // Recalculate total paid and status
+        const bill = database_1.db.prepare(`SELECT total FROM bills WHERE id = ?`).get(billId);
+        if (bill) {
+            const splitResult = database_1.db.prepare(`SELECT SUM(amount) as total_paid FROM split_payments WHERE bill_id = ?`).get(billId);
+            const totalPaid = splitResult?.total_paid || 0;
+            let status = 'Pending';
+            if (totalPaid >= bill.total) {
+                status = 'Paid';
+            }
+            else if (totalPaid > 0) {
+                status = 'Partial';
+            }
+            database_1.db.prepare(`UPDATE bills SET paid_amount = ?, status = ? WHERE id = ?`).run(totalPaid, status, billId);
+            // Also update the payments table method to reflect latest payment
+            const existingPayment = database_1.db.prepare(`SELECT id FROM payments WHERE bill_id = ?`).get(billId);
+            if (existingPayment) {
+                database_1.db.prepare(`UPDATE payments SET method = ?, amount = ? WHERE bill_id = ?`).run(method, totalPaid, billId);
+            }
+            else {
+                database_1.db.prepare(`INSERT INTO payments (bill_id, method, amount) VALUES (?, ?, ?)`).run(billId, method, totalPaid);
+            }
+            return { success: true, id: Number(result.lastInsertRowid), totalPaid, remainingBalance: Math.max(0, bill.total - totalPaid), status };
+        }
+        return { success: true, id: Number(result.lastInsertRowid) };
+    });
+    return transaction.immediate();
+});
+electron_2.ipcMain.handle("get-split-payments", (_, billId) => {
+    return database_1.db.prepare(`SELECT * FROM split_payments WHERE bill_id = ? ORDER BY created_at ASC`).all(billId);
+});
+electron_2.ipcMain.handle("delete-split-payment", (_, { billId, paymentId }) => {
+    const transaction = database_1.db.transaction(() => {
+        database_1.db.prepare(`DELETE FROM split_payments WHERE id = ? AND bill_id = ?`).run(paymentId, billId);
+        // Recalculate
+        const bill = database_1.db.prepare(`SELECT total FROM bills WHERE id = ?`).get(billId);
+        if (bill) {
+            const splitResult = database_1.db.prepare(`SELECT SUM(amount) as total_paid FROM split_payments WHERE bill_id = ?`).get(billId);
+            const totalPaid = splitResult?.total_paid || 0;
+            let status = 'Pending';
+            if (totalPaid >= bill.total) {
+                status = 'Paid';
+            }
+            else if (totalPaid > 0) {
+                status = 'Partial';
+            }
+            database_1.db.prepare(`UPDATE bills SET paid_amount = ?, status = ? WHERE id = ?`).run(totalPaid, status, billId);
+            return { success: true, totalPaid, remainingBalance: Math.max(0, bill.total - totalPaid), status };
+        }
+        return { success: true };
     });
     return transaction.immediate();
 });
@@ -304,7 +432,7 @@ electron_2.ipcMain.handle("get-report-stats", (_, { month, year }) => {
     const endDate = new Date(year, month, 1); // first of next month
     const end = endDate.toISOString();
     const bills = database_1.db.prepare(`
-    SELECT b.id, b.total, b.created_at, p.method
+    SELECT b.id, b.total, b.created_at, b.paid_amount, b.status, p.method
     FROM bills b
     LEFT JOIN payments p ON p.bill_id = b.id
     WHERE b.created_at >= ? AND b.created_at < ?
@@ -314,11 +442,22 @@ electron_2.ipcMain.handle("get-report-stats", (_, { month, year }) => {
     let invoicesGenerated = bills.length;
     let pending = 0;
     for (const b of bills) {
-        const isPaid = ["cash", "card", "upi"].includes((b.method || "").toLowerCase());
-        if (isPaid)
-            monthlyRevenue += b.total;
-        else
-            pending += b.total;
+        // Check split payments for this bill
+        const splitResult = database_1.db.prepare(`SELECT SUM(amount) as total_paid FROM split_payments WHERE bill_id = ?`).get(b.id);
+        const splitPaid = splitResult?.total_paid || 0;
+        if (splitPaid > 0) {
+            // Has split payments - use actual paid amounts
+            monthlyRevenue += splitPaid;
+            pending += Math.max(0, b.total - splitPaid);
+        }
+        else {
+            // Legacy: check payment method
+            const isPaid = ["cash", "card", "upi"].includes((b.method || "").toLowerCase());
+            if (isPaid)
+                monthlyRevenue += b.total;
+            else
+                pending += b.total;
+        }
     }
     // Count items as "prints"
     const itemsRes = database_1.db.prepare(`
@@ -377,7 +516,7 @@ electron_2.ipcMain.handle("get-report-stats", (_, { month, year }) => {
     }));
     // Recent transactions (last 10 in month)
     const recentTx = database_1.db.prepare(`
-    SELECT b.id, b.bill_number, b.total, b.created_at, c.name AS customer_name, p.method,
+    SELECT b.id, b.bill_number, b.total, b.created_at, b.status, c.name AS customer_name, p.method,
            GROUP_CONCAT(bi.service || ' x' || bi.quantity, ', ') as items
     FROM bills b
     LEFT JOIN customers c ON c.id = b.customer_id
@@ -399,7 +538,7 @@ electron_2.ipcMain.handle("get-report-stats", (_, { month, year }) => {
         serviceBreakdown,
         recentTransactions: recentTx.map(t => ({
             ...t,
-            status: ["cash", "card", "upi"].includes((t.method || "").toLowerCase()) ? "Paid" : "Pending"
+            status: t.status || (["cash", "card", "upi"].includes((t.method || "").toLowerCase()) ? "Paid" : "Pending")
         }))
     };
 });
@@ -415,10 +554,9 @@ electron_2.ipcMain.handle("get-customers", () => {
       COALESCE(SUM(b.total), 0) AS totalSpent,
       MAX(b.created_at) AS lastVisit,
       COALESCE((
-        SELECT SUM(b2.total)
+        SELECT SUM(MAX(0, b2.total - COALESCE(b2.paid_amount, 0)))
         FROM bills b2
-        LEFT JOIN payments p ON p.bill_id = b2.id
-        WHERE b2.customer_id = c.id AND (p.method IS NULL OR LOWER(p.method) NOT IN ('cash', 'card', 'upi'))
+        WHERE b2.customer_id = c.id
       ), 0) AS pending
 
     FROM customers c

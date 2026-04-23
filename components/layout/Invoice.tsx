@@ -156,10 +156,11 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
         };
 
         const BillTotal = calculateInvoice(billData)
-        // console.log(BillTotal)
+        const hasPayments = paymentHistory && paymentHistory.length > 0;
+        const isViewMode = !setBillData; 
   return (
     <>
-    <section ref={invoiceRef} className="w-full h-full relative flex flex-col rounded-lg bg-white p-2 ">
+    <section ref={invoiceRef} className="w-full h-max relative flex flex-col rounded-lg bg-white p-2 ">
         <header className="w-full h-auto border-b border-b-[#00000014] px-4 py-2">
             <aside className="flex justify-between items-center">
                 <h1 className="text-sm text-[#64748B] ">
@@ -216,7 +217,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                                         {data.paper}
                                     </Table.Cell>
                                     <Table.Cell>
-                                        {data.rate}
+                                        {data.rate * data.paper}
                                     </Table.Cell>
                                     <Table.Cell>
                                         {data.amount || data.quantity * (data.paper || 1) * data.rate}
@@ -335,48 +336,81 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                     </div>
                     {paymentHistory && paymentHistory.length > 0 && (
                         <div className="w-full h-auto space-y-2 border-t border-[#00000014] pt-2 mt-2">
-                            <h2 className="text-base font-bold uppercase tracking-wider mb-1">Payment History</h2>
-                            <div className="flex flex-col gap-1.5">
-                                {paymentHistory.map((history, idx) => (
-                                    <div key={idx} className="flex justify-between items-center text-sm text-gray-600 bg-gray-50 p-1.5 rounded border border-gray-100">
-                                        <span className="font-medium">{new Date(history.updated_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</span>
-                                        <div className="flex items-center gap-1.5 font-medium text-sm">
-                                            <span className="text-gray-400">{history.old_payment_method || "None"}</span>
-                                            <span className="text-gray-400">&rarr;</span>
-                                            <span className="text-blue-600">{history.new_payment_method}</span>
-                                        </div>
-                                    </div>
-                                ))}
+                            <h2 className="text-sm font-bold uppercase tracking-wider mb-1">
+                            Payment History
+                            </h2>
+
+                            <div className="flex flex-col gap-2">
+                            {paymentHistory.map((payment, idx) => (
+                                <div
+                                key={payment.id || idx}
+                                className="flex justify-between items-center text-xs bg-gray-50 p-2 rounded border border-gray-100"
+                                >
+                                {/* Left */}
+                                <div className="flex flex-col">
+                                    <span className="font-semibold text-gray-700">
+                                    {payment.method}
+                                    </span>
+
+                                    <span className="text-[10px] text-gray-400">
+                                    {new Date(payment.created_at).toLocaleString('en-IN', {
+                                        dateStyle: 'short',
+                                        timeStyle: 'short'
+                                    })}
+                                    </span>
+
+                                    {payment.note && (
+                                    <span className="text-[10px] italic text-gray-400">
+                                        {payment.note}
+                                    </span>
+                                    )}
+                                </div>
+
+                                {/* Right */}
+                                <div className="font-bold text-gray-800">
+                                    ₹{Number(payment.amount).toLocaleString('en-IN')}
+                                </div>
+                                </div>
+                            ))}
                             </div>
                         </div>
-                    )}
-                    {(existingBill && !isEditMode) ? (
+                        )}
+
+                   {!isEditMode && !hasPayments && !isViewMode && (
                         <div className="w-full flex flex-col items-center gap-4">
-                                <div className='w-full text-center text-sm font-semibold'>
-                                    <RadioGroup value={value} onValueChange={setValue} name='serviceType' className='w-full h-auto flex items-center justify-center gap-2 text-sm mx-auto' >
-                                    <RadioGroup.Item value='Cash' label='Cash' icon={<Cash/>} />
-                                    <RadioGroup.Item value='UPI' label='UPI / QR' icon={<Upi/>} />
-                                    <RadioGroup.Item value='Card' label='Card' icon={<Card/>}/>
-                                    <RadioGroup.Item value='Pending' label='Pending'/>
-                                </RadioGroup>
-                            </div>
-                            <div data-html2canvas-ignore className="w-full flex justify-center">
-                                <Button variant='primary' icon={<Print className='w-6 h-6'/>} onClick={() => setShouldDownload(true)} className='w-4/5'>
-                                    Download PDF
-                                </Button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="w-full flex flex-col items-center gap-4">
-                            <RadioGroup value={value} onValueChange={setValue} name='serviceType' className='w-full h-auto flex items-center justify-center gap-2 text-sm mx-auto' >
-                                <RadioGroup.Item value='Cash' label='Cash' icon={<Cash/>} />
-                                <RadioGroup.Item value='UPI' label='UPI / QR' icon={<Upi/>} />
-                                <RadioGroup.Item value='Card' label='Card' icon={<Card/>}/>
-                                <RadioGroup.Item value='Pending' label='Pending'/>
+                            <RadioGroup
+                            value={value}
+                            onValueChange={setValue}
+                            name='serviceType'
+                            className='w-full h-auto flex items-center justify-center gap-2 text-sm mx-auto'
+                            >
+                            <RadioGroup.Item value='Cash' label='Cash' icon={<Cash/>} />
+                            <RadioGroup.Item value='UPI' label='UPI / QR' icon={<Upi/>} />
+                            <RadioGroup.Item value='Card' label='Card' icon={<Card/>}/>
+                            <RadioGroup.Item value='Pending' label='Pending'/>
                             </RadioGroup>
 
-                            <Button data-html2canvas-ignore variant='primary' icon={<Print className='w-6 h-6'/>} onClick={saveBill} className='w-4/5'>
-                                {isEditMode ? 'Update & Print Invoice' : 'Generate & Print Invoice'}
+                            <Button
+                            data-html2canvas-ignore
+                            variant='primary'
+                            icon={<Print className='w-6 h-6'/>}
+                            onClick={saveBill}
+                            className='w-4/5'
+                            >
+                            Generate & Print Invoice
+                            </Button>
+                        </div>
+                    )}
+                    {(isViewMode || hasPayments) && (
+                        <div className="w-full flex justify-center">
+                            <Button
+                            data-html2canvas-ignore
+                            variant='primary'
+                            icon={<Print className='w-6 h-6'/>}
+                            onClick={()=>{setShouldDownload(true)}}
+                            className='w-4/5'
+                            >
+                            Download Invoice
                             </Button>
                         </div>
                     )}

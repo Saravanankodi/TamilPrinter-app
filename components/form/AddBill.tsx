@@ -85,7 +85,7 @@ const AddBill = ({data,setData}:billData) => {
             </h1>
             <button className='text-sm text-[#0496ff]  ' >Reset Form</button>
         </header>
-        <form onSubmit={handleSubmit}  className='h-max  p-2 space-y-2'>
+        <form onSubmit={handleSubmit}  className='h-max p-2 space-y-2'>
             {/* <Lable Name='Service Type' value={formData.service || "Select Service Type"}/> */}
             <p className="text-sm">
                 Service Type

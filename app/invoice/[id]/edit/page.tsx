@@ -158,7 +158,7 @@ export default function EditInvoice() {
   if (loading) return <div className="p-12 text-center text-gray-500 font-bold animate-pulse">Loading Invoice Metadata...</div>;
 
   return (
-    <section className="w-full flex-1 flex flex-col h-full overflow-scroll bg-[#F8FAFC]">
+    <section className="w-full flex-1 flex flex-col h-full overflow-scroll no-scrollbar bg-[#F8FAFC]">
       <header className="w-full py-4 px-6 border-b bg-white border-[#E2E8F0] flex justify-between items-center shadow-sm">
         <div>
           <div className="text-gray-500 text-[10px] uppercase font-bold tracking-widest mb-1">Billing &gt; Edit Mode</div>
@@ -173,14 +173,14 @@ export default function EditInvoice() {
         </div>
       </header>
 
-      <div className="flex-1 w-full flex gap-6 bg-[#F1F5F9] p-6 overflow-auto">
+      <div className="flex-1 w-full flex gap-6 bg-[#F1F5F9] p-6 overflow-auto no-scrollbar ">
         {/* Left: Invoice Preview */}
         <div className="flex-1 min-w-0 flex flex-col gap-4">
-          <div className="w-full p-4 bg-blue-50 border border-blue-200 rounded-xl flex flex-col gap-1 text-blue-800 text-center">
+          {/* <div className="w-full p-4 bg-blue-50 border border-blue-200 rounded-xl flex flex-col gap-1 text-blue-800 text-center">
              <p className="text-sm font-semibold">ℹ️ Edit Bill Mode</p>
              <p className="text-xs">Invoice items, totals, and customer details are read-only. Use the panel on the right to manage payments.</p>
-          </div>
-          <div className="bg-white shadow-2xl rounded-xl overflow-hidden border border-gray-100 ring-1 ring-black/5">
+          </div> */}
+          <div className="bg-white shadow-2xl rounded-xl overflow-auto no-scrollbar border border-gray-100 ring-1 ring-black/5">
             <Invoice
               customerData={customerData}
               billData={billData}
@@ -189,13 +189,13 @@ export default function EditInvoice() {
               existingBill={existingBill}
               paymentMethod={payment}
               billId={billId}
-              paymentHistory={paymentHistory}
+              paymentHistory={splitPayments}
             />
           </div>
         </div>
 
         {/* Right: Split Payment Panel */}
-        <div className="w-[400px] shrink-0 flex flex-col gap-4">
+        <div className="w-100 shrink-0 flex flex-col gap-4">
 
           {/* Payment Summary Card */}
           <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-5 space-y-4">
@@ -216,9 +216,9 @@ export default function EditInvoice() {
                 <div
                   className={`h-full rounded-full transition-all duration-700 ease-out ${
                     progressPct >= 100
-                      ? 'bg-gradient-to-r from-emerald-400 to-emerald-500'
+                      ? 'bg-linear-to-r from-emerald-400 to-emerald-500'
                       : progressPct > 0
-                      ? 'bg-gradient-to-r from-amber-400 to-orange-400'
+                      ? 'bg-linear-to-r from-amber-400 to-orange-400'
                       : 'bg-gray-200'
                   }`}
                   style={{ width: `${progressPct}%` }}
@@ -253,26 +253,6 @@ export default function EditInvoice() {
                 <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">+</span>
                 Record Payment
               </h2>
-
-              {/* Method Selection */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Method</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['Cash', 'UPI', 'Card'].map((method) => (
-                    <button
-                      key={method}
-                      onClick={() => setSplitMethod(method)}
-                      className={`px-3 py-2 rounded-lg text-sm font-semibold border-2 transition-all duration-200 ${
-                        splitMethod === method
-                          ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
-                          : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 hover:bg-gray-100'
-                      }`}
-                    >
-                      {method}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               {/* Amount Input */}
               <div className="space-y-1.5">
@@ -318,6 +298,26 @@ export default function EditInvoice() {
                 />
               </div>
 
+              {/* Method Selection */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Method</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['Cash', 'UPI', 'Card'].map((method) => (
+                    <button
+                      key={method}
+                      onClick={() => setSplitMethod(method)}
+                      className={`px-3 py-2 rounded-lg text-sm font-semibold border-2 transition-all duration-200 ${
+                        splitMethod === method
+                          ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                          : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 hover:bg-gray-100'
+                      }`}
+                    >
+                      {method}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Submit Button */}
               <button
                 onClick={handleAddSplitPayment}
@@ -325,7 +325,7 @@ export default function EditInvoice() {
                 className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
                   addingPayment || !splitAmount
                     ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg active:scale-[0.98]'
+                    : 'bg-linear-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg active:scale-[0.98]'
                 }`}
               >
                 {addingPayment ? 'Recording...' : `Record ₹${splitAmount || '0'} Payment`}
@@ -335,7 +335,7 @@ export default function EditInvoice() {
 
           {/* Paid Badge for Fully Paid */}
           {remainingBalance <= 0 && grandTotal > 0 && (
-            <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl border-2 border-emerald-200 p-5 text-center space-y-2">
+            <div className="bg-linear-to-br from-emerald-50 to-green-50 rounded-xl border-2 border-emerald-200 p-5 text-center space-y-2">
               <div className="text-4xl">🎉</div>
               <p className="text-lg font-extrabold text-emerald-700">Fully Paid!</p>
               <p className="text-xs text-emerald-500">This invoice has been fully settled.</p>
@@ -346,14 +346,14 @@ export default function EditInvoice() {
           {splitPayments.length > 0 && (
             <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-5 space-y-3">
               <h2 className="text-base font-bold text-gray-800">Payment Records</h2>
-              <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-70 overflow-y-auto pr-1">
                 {splitPayments.map((sp, idx) => (
                   <div
                     key={sp.id || idx}
                     className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100 hover:shadow-sm transition-shadow group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-xs font-bold text-blue-600">
+                      <div className="w-8 h-8 rounded-full bg-linear-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-xs font-bold text-blue-600">
                         #{idx + 1}
                       </div>
                       <div>

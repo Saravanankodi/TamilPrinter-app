@@ -18,12 +18,12 @@ export default function InvoicePage() {
 
   if (!data) return <p>Loading...</p>;
 
-  const { bill, customer, items, paymentMethod, paymentHistory } = data;
+  const { bill, customer, items, paymentMethod, splitPayments } = data;
   
   return (
     <>
     <section className="w-1/2 h-full overflow-scroll no-scrollbar">
-      <Invoice billData={items} customerData={customer} onSaved={()=>{}} existingBill={bill} paymentMethod={paymentMethod} paymentHistory={paymentHistory} />
+      <Invoice billData={items} customerData={customer} onSaved={()=>{}} existingBill={bill} paymentMethod={paymentMethod} paymentHistory={splitPayments} />
     </section>
     </>
   );

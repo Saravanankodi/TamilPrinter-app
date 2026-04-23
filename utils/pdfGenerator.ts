@@ -50,7 +50,11 @@ export async function generatePDF(
     const imgWidth = pdfWidth;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    let heightLeft = imgHeight;
+    // ✅ Add first page
+pdf.addImage(imgData, "PNG", margin, margin, imgWidth, imgHeight);
+
+// ✅ Calculate remaining height
+let heightLeft = imgHeight - pdfHeight;
     let position = 0;
 
     while (heightLeft > 0) {

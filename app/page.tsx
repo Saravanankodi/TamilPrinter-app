@@ -54,7 +54,7 @@ export default function Home() {
     const lowStockItems = products.filter(p => p.track_stock === 1 && p.current_stock < 10);
 
     return (
-        <section ref={dashboardRef} className="w-full h-full flex flex-col gap-2 text-black p-4 pt-0 overflow-y-auto relative">
+        <section ref={dashboardRef} className="w-full h-full flex flex-col gap-2 text-black p-4 pt-0 overflow-y-scroll no-scrollbar relative">
             <header data-html2canvas-ignore className="w-full h-min p-2 flex items-center justify-between bg-white border border-[#00000014]">
                 <aside>
                     <h1 className="text-2xl font-bold">
@@ -85,7 +85,7 @@ export default function Home() {
                 </div>
             </header>
 
-            <div className="w-full h-40 flex items-center justify-center gap-6">
+            <div className="w-full flex items-center justify-center gap-2 flex-wrap">
                 <Card
                     label="Today's Revenue"
                     value={`₹${stats.todaysRevenue.toLocaleString('en-IN')}`}
@@ -100,13 +100,13 @@ export default function Home() {
                     color='#10B981'
                     icon={<Document className='w-8 h-8 bg-[#F3F4F6] text-[#374151] rounded-md p-2 ' />}
                 />
-                <Card
+                {/* <Card
                     label="Total Paper Print"
                     value={totalPrints.toString()}
                     disc="This month"
                     color='#10B981'
                     icon={<SvgDoc className='w-8 h-8 bg-[#FEF2F2] rounded-md p-2 ' />}
-                />
+                /> */}
                 <Card
                     label="Today Total"
                     value={`₹${stats.todaysIncome.toLocaleString('en-IN')}`}
@@ -127,7 +127,7 @@ export default function Home() {
                     <RecentInvoice />
                 </div>
                 {/* Quick Actions */}
-                <div className="col-span-4 row-span-3 bg-white rounded-xl shadow-sm border border-[#00000014] overflow-scroll no-scrollbar flex flex-col">
+                <div className="hidden col-span-4 row-span-3 bg-white rounded-xl shadow-sm border border-[#00000014] overflow-scroll no-scrollbar md:flex flex-col">
                     <header className="w-full h-auto px-2 py-3 border-b border-[#00000014] ">
                         <h3 className="font-bold text-lg">
                             Quick Actions
@@ -156,7 +156,7 @@ export default function Home() {
                                 </p>
                             </div>
                         </Link>
-                        <button onClick={() => setShowIncomePopup(true)} className="flex items-center gap-4 p-2 border border-[#E2E8F0] hover:border-blue-400 hover:bg-blue-50/50 rounded-xl transition-all group">
+                        {/* <button onClick={() => setShowIncomePopup(true)} className="flex items-center gap-4 p-2 border border-[#E2E8F0] hover:border-blue-400 hover:bg-blue-50/50 rounded-xl transition-all group">
                             <div className="p-2 rounded-lg bg-gray-100 text-gray-600 group-hover:scale-110 transition-transform">
                                 <Customers className="w-6 h-6" />
                             </div>
@@ -168,12 +168,12 @@ export default function Home() {
                                     View today's earnings
                                 </p>
                             </div>
-                        </button>
+                        </button> */}
                     </div>
                 </div>
 
                 {/* Inventory Overview */}
-                <div className="col-span-4 row-span-3 w-full h-full bg-white rounded-xl shadow-sm border border-[#00000014] overflow-hidden flex flex-col flex-1 ">
+                <div className=" hidden col-span-4 row-span-3 w-full h-full bg-white rounded-xl shadow-sm border border-[#00000014] overflow-hidden md:flex flex-col flex-1 ">
                     <header className="w-full h-auto px-2 py-3 border-b border-[#00000014] flex justify-between items-center">
                         <h3 className="font-bold text-lg">
                             Inventory Overview
@@ -182,7 +182,7 @@ export default function Home() {
                             <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest">{lowStockItems.length} Low</span>
                         )}
                     </header>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
                         {products.filter(p => p.track_stock === 1).length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-gray-400 text-center p-8 gap-3 opacity-60">
                                 <div className="w-12 h-12 rounded-full border-2 border-gray-200 flex items-center justify-center">📦</div>
@@ -210,14 +210,6 @@ export default function Home() {
                 </div>
 
             </main>
-            {
-                showIncomePopup && (
-                    <div className="w-auto absolute top-1/2 left-1/2 -translate-1/2 z-11">
-                        <TodayIncome />
-                    </div>
-                )
-            }
-
         </section>
     );
 }

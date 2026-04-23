@@ -130,6 +130,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
                         customer: customerData,
                         items: billData,
                         paymentMethod: value,
+                        Total: BillTotal.grandTotal
                     });
                     setBillNumber(result.billNumber);
                 }

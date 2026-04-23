@@ -23,7 +23,7 @@ type BillRow = {
 };
 
 ipcMain.handle("save-bill", (_, payload) => {
-  const { customer, items, paymentMethod } = payload;
+  const { customer, items, paymentMethod, Total } = payload;
 
   if (!customer?.phone || !items?.length) {
     throw new Error("Invalid bill data");
@@ -56,13 +56,7 @@ ipcMain.handle("save-bill", (_, payload) => {
       customerId = Number(result.lastInsertRowid);
     }
 
-    // 2️⃣ Calculate total
-    const total = items.reduce((sum: number, item: any) => {
-      const quantity = Number(item.quantity) || 0;
-      const paper = Number(item.paper) || 0;
-      const rate = Number(item.rate) || 0;
-      return sum + quantity * paper * rate;
-    }, 0);
+    const total = Number(Total) || 0;
 
     // 3️⃣ Insert bill
     const now = new Date();

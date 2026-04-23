@@ -15,7 +15,7 @@ if (!gotLock) {
 // Now it is safe to import the database
 const database_1 = require("./database");
 electron_2.ipcMain.handle("save-bill", (_, payload) => {
-    const { customer, items, paymentMethod } = payload;
+    const { customer, items, paymentMethod, Total } = payload;
     if (!customer?.phone || !items?.length) {
         throw new Error("Invalid bill data");
     }
@@ -36,13 +36,7 @@ electron_2.ipcMain.handle("save-bill", (_, payload) => {
             const result = insertCustomer.run(customer.name, customer.mail, customer.phone, customer.ref);
             customerId = Number(result.lastInsertRowid);
         }
-        // 2️⃣ Calculate total
-        const total = items.reduce((sum, item) => {
-            const quantity = Number(item.quantity) || 0;
-            const paper = Number(item.paper) || 0;
-            const rate = Number(item.rate) || 0;
-            return sum + quantity * paper * rate;
-        }, 0);
+        const total = Number(Total) || 0;
         // 3️⃣ Insert bill
         const now = new Date();
         const year = String(now.getFullYear()).slice(-2);

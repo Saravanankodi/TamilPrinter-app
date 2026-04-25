@@ -66,31 +66,39 @@ const CustomerDetails = ({data,setData}:customerData) => {
               list="customer-names"
               placeholder='Walk-in customer' 
               value={data.name || ""} 
-              onChange={handleNameChange} />
+              onChange={handleNameChange}
+              required
+            />
 
             <Input 
               className='max-w-75'
               label="Phone Number" 
-              type='number' 
+              type='tel' 
               list="customer-phones"
-              placeholder='Enter mobile number'
+              placeholder='10-digit mobile number'
               value={data.phone || ""} 
-              onChange={handlePhoneChange} />
+              onChange={handlePhoneChange}
+              maxLength={10}
+              pattern="[0-9]{10}"
+            />
 
             <Input 
               className='max-w-75'
               label="Email ID" 
               type='email' 
-              placeholder='Optional for invoice copy'
+              placeholder='customer@example.com (Optional)'
               value={data.mail || ""}
-              onChange={(e)=>{setData((prev)=>({...prev,mail:e.target.value}))}} />
+              onChange={(e)=>{setData((prev)=>({...prev,mail:e.target.value}))}} 
+            />
             <Input 
               className='max-w-75'
               label="Reference / Note" 
               type='text' 
               placeholder='E.g. College project, ID card xerox' 
               value={data.ref || ""}
-              onChange={(e)=>{setData((prev)=>({...prev,ref:e.target.value}))}}/>
+              onChange={(e)=>{setData((prev)=>({...prev,ref:e.target.value}))}}
+              maxLength={100}
+            />
         </form>
     </section>
     </>

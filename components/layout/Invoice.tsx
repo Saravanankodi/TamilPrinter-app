@@ -24,7 +24,10 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
         const [billNumber, setBillNumber] = useState<string | null>(existingBill?.bill_number || null);
         const [shouldDownload, setShouldDownload] = useState(false);
 
-        // console.log(paymentMethod?.method)
+
+        const today = new Date().toLocaleDateString("en-GB")
+
+        // Fetch bill Number
         useEffect(() => {
             const fetchNextBill = async () => {
                 if (!isEditMode && !billNumber && !existingBill) {
@@ -39,19 +42,21 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
             fetchNextBill();
         }, [billNumber, existingBill]);
 
+        // set bill number if isEditMode 
         useEffect(() => {
             if (isEditMode && existingBill?.bill_number) {
                 setBillNumber(existingBill.bill_number);
             }
         }, [isEditMode, existingBill]);
 
+        // new bill payment method selection
         useEffect(() => {
             if (paymentMethod) {
                 setValue(paymentMethod?.method);
             }
         }, [paymentMethod]);
 
-        const today = new Date().toLocaleDateString("en-GB")
+        // to download the pdf with 500ms delay
         useEffect(() => {
             if (shouldDownload && invoiceRef.current) {
                 const timer = setTimeout(async () => {
@@ -71,6 +76,7 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
             }
         }, [shouldDownload]);
 
+        // For date and time in invoice
         useEffect(() => {
             const timer = setInterval(() => setCurrentTime(new Date()), 1000);
             return () => clearInterval(timer);
@@ -88,32 +94,66 @@ const Invoice: React.FC<InvoiceProps> = ({customerData,billData,onSaved,setBillD
         //     }
         // }, [customerData, existingBill, isEditMode]);
 
-        const saveBill = async () => {
-            if (!billData || billData.length === 0) {
-                await showAlert({
-                icon: 'info',
-                title: 'Alert!',
-                text: 'You cannot enter details temporarily.',
-                confirmText: 'OK',
-                });
-                return;
+        const validateAll = () => {
+            let errors: string[] = [];
+
+            // Customer validation
+            if (!customerData.name?.trim()) {
+                errors.push("Customer name is required");
             }
 
-            if (customerData.name == '-' && customerData.phone == '-'){
-                await showAlert({
-                icon: 'warning',
-                title: 'Invaild Customer Details',
-                text: 'Please Enter customer details',
-                confirmText: 'OK',
-                });
-                return;
+            const phone = customerData.phone?.toString() || "";
+            if (phone && !/^[0-9]{10}$/.test(phone)) {
+                errors.push("Enter a valid 10-digit phone number");
             }
-            if (!value) {
+
+            if (
+                customerData.mail &&
+                !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerData.mail)
+            ) {
+                errors.push("Invalid email format");
+            }
+
+            // Bill validation
+            if (!billData || billData.length === 0) {
+                errors.push("Add at least one item to the bill");
+            }
+
+            // Validate each item
+            billData.forEach((item, index) => {
+                const itemNum = index + 1;
+                if (!item.service || item.service === "Select Service Type") {
+                    errors.push(`Item ${itemNum}: Service type is required`);
+                }
+                if (!item.quantity || item.quantity <= 0) {
+                    errors.push(`Item ${itemNum}: Quantity must be greater than 0`);
+                }
+                if (item.rate === undefined || item.rate < 0) {
+                    errors.push(`Item ${itemNum}: Rate cannot be negative`);
+                }
+                if (item.paper === undefined || item.paper < 0) {
+                    errors.push(`Item ${itemNum}: Paper count cannot be negative`);
+                }
+            });
+
+            // Payment
+            if (!value && !isEditMode) {
+                errors.push("Select a payment method");
+            }
+
+            return errors;
+        };
+        
+        // save bill funcation for invoice
+        const saveBill = async () => {
+            const errors = validateAll();
+
+            if (errors.length > 0) {
                 await showAlert({
-                icon: 'warning',
-                title: 'Select Payment',
-                text: 'Please select a payment method before saving.',
-                confirmText: 'OK',
+                    icon: "warning",
+                    title: "Validation Error",
+                    text: errors.join("\n"),
+                    confirmText: "OK",
                 });
                 return;
             }

@@ -62,6 +62,22 @@ const AddBill = ({data,setData}:billData) => {
       const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Validation
+        if (!formData.service) {
+          alert("Please select a service type");
+          return;
+        }
+
+        if (formData.quantity <= 0) {
+          alert("Quantity must be at least 1");
+          return;
+        }
+
+        if (formData.rate < 0) {
+          alert("Rate cannot be negative");
+          return;
+        }
+
         setData(prev => [...prev, { ...formData, id: crypto.randomUUID() }]);
 
         setFormData({
@@ -106,7 +122,7 @@ const AddBill = ({data,setData}:billData) => {
                     >
                         -
                     </button>
-                    <Input label='Quantity' type='number' value={formData.quantity} onChange={handleChange} required />
+                    <Input label='Quantity' type='number' value={formData.quantity} onChange={handleChange} required min={1} />
                     <button
                         onClick={increment}
                         className="px-4 py-2 bg-[#F8FAFC] max-h-10  outline-none border border-[#00000014] text-sm rounded-md "
@@ -114,14 +130,14 @@ const AddBill = ({data,setData}:billData) => {
                         +
                     </button>
                 </div>
-                <Input label='Page' type='number' value={formData.page} onChange={(e)=>(setFormData((prev)=>({...prev,page:Number(e.target.value)})))} required/>
+                <Input label='Page' type='number' value={formData.page} onChange={(e)=>(setFormData((prev)=>({...prev,page:Number(e.target.value)})))} required min={0} />
                 <Dropdown name='Print Type' option={options} value={formData.print} onChange={(value)=>setFormData((prev)=>({...prev,print:value}))}/>
-                <Input label='Rate (per paper)' type='number' value={formData.rate} onChange={(e)=>(setFormData((prev)=>({...prev,rate:Number(e.target.value)})))} required />
+                <Input label='Rate (per paper)' type='number' value={formData.rate} onChange={(e)=>(setFormData((prev)=>({...prev,rate:Number(e.target.value)})))} required min={0} step={0.1} />
             </div>
 
             <div className="flex items-end gap-3">
-                <Input label='Paper' type='number' value={formData.paper} onChange={(e)=>(setFormData((prev)=>({...prev,paper:Number(e.target.value)})))} required/>
-                <Input label='Name (Optional)' placeholder='Add specific instructions...' value={formData.note} onChange={(e)=>(setFormData((prev)=>({...prev,note:e.target.value})))}/>
+                <Input label='Paper' type='number' value={formData.paper} onChange={(e)=>(setFormData((prev)=>({...prev,paper:Number(e.target.value)})))} required min={0} />
+                <Input label='Name (Optional)' placeholder='Add specific instructions...' value={formData.note} onChange={(e)=>(setFormData((prev)=>({...prev,note:e.target.value})))} maxLength={50} />
             </div>
 
             <Button type='submit' icon={<AddRounded/>} className='w-full font-semibold' variant='secondary'>

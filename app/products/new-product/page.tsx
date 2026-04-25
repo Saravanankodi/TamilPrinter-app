@@ -47,8 +47,22 @@ function NewProductForm() {
   }, [productId]);
 
   const handleSubmit = async () => {
-    if (!formData.name) {
-      showAlert({ title: "Error", text: "Product Name is required", icon: "error" } as any);
+    const errors: string[] = [];
+    if (!formData.name.trim()) errors.push("Product Name is required");
+    if (!formData.category) errors.push("Category is required");
+    
+    const cost = Number(formData.costPrice);
+    if (formData.costPrice && (isNaN(cost) || cost < 0)) {
+      errors.push("Cost Price must be a valid positive number");
+    }
+
+    const stock = Number(formData.currentStock);
+    if (formData.trackStock && (isNaN(stock) || stock < 0)) {
+      errors.push("Initial stock must be a valid positive number");
+    }
+
+    if (errors.length > 0) {
+      showAlert({ title: "Validation Error", text: errors.join("\n"), icon: "warning" } as any);
       return;
     }
     
@@ -57,8 +71,8 @@ function NewProductForm() {
       const payload = {
         ...formData,
         id: productId ? Number(productId) : undefined,
-        costPrice: Number(formData.costPrice) || 0,
-        currentStock: Number(formData.currentStock) || 0
+        costPrice: cost || 0,
+        currentStock: stock || 0
       };
 
       if (productId) {
@@ -203,6 +217,8 @@ function NewProductForm() {
                   className="w-full border border-gray-300 rounded bg-[#F8FAFC] px-3 py-2 text-sm focus:outline-none"
                   value={formData.costPrice}
                   onChange={e => setFormData({ ...formData, costPrice: e.target.value })}
+                  min={0}
+                  step={0.01}
                 />
               </div>
               
@@ -254,6 +270,7 @@ function NewProductForm() {
                   className="w-full border border-gray-300 rounded px-3 py-2 text-sm max-w-[200px] focus:outline-none focus:border-blue-500"
                   value={formData.currentStock}
                   onChange={e => setFormData({ ...formData, currentStock: e.target.value })}
+                  min={0}
                 />
               </div>
             )}
